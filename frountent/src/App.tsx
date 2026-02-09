@@ -1,14 +1,10 @@
-// frontend/src/App.tsx
-
 import AppRoutes from "./routes/AppRoutes";
+import "./styles/custom.css";
 
-function App() {
+export default function App() {
   return (
     <div>
       <AppRoutes />
     </div>
   );
 }
-
-export default App;
-
