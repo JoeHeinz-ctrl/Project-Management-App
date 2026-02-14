@@ -9,3 +9,8 @@ engine = create_engine(
 )
 
 Base = declarative_base()
+
+# ⭐ ADD THIS BLOCK
+from app.models.user import User
+from app.models.project import Project
+from app.models.task import Task
