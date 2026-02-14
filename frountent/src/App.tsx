@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchTasks, createTask } from "./services/api";
+import { fetchTasks, createTask, moveTask } from "./services/api";
 
 const styles: any = {
   container: {
@@ -47,6 +47,7 @@ const styles: any = {
     padding: "20px",
     borderRadius: "10px",
     minHeight: "400px",
+    transition: "0.2s",
   },
 
   title: {
@@ -59,12 +60,14 @@ const styles: any = {
     padding: "10px",
     borderRadius: "8px",
     marginBottom: "10px",
+    cursor: "grab",
   },
 };
 
 export default function App() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [newTask, setNewTask] = useState("");
+  const [draggedTask, setDraggedTask] = useState<any | null>(null);
 
   useEffect(() => {
     fetchTasks()
@@ -81,12 +84,31 @@ export default function App() {
     try {
       const created = await createTask(newTask);
 
-      // Instant UI update (no reload needed)
       setTasks(prev => [...prev, created]);
       setNewTask("");
     } catch (err) {
       console.error("CREATE TASK ERROR:", err);
     }
+  };
+
+  const onDragStart = (task: any) => {
+    setDraggedTask(task);
+  };
+
+  const onDrop = async (status: string) => {
+    if (!draggedTask) return;
+
+    try {
+      const updated = await moveTask(draggedTask.id, status);
+
+      setTasks(prev =>
+        prev.map(t => (t.id === updated.id ? updated : t))
+      );
+    } catch (err) {
+      console.error("MOVE ERROR:", err);
+    }
+
+    setDraggedTask(null);
   };
 
   const normalizeStatus = (s: string) => {
@@ -105,7 +127,12 @@ export default function App() {
     tasks
       .filter(t => normalizeStatus(t.status) === status)
       .map(t => (
-        <div key={t.id} style={styles.card}>
+        <div
+          key={t.id}
+          style={styles.card}
+          draggable
+          onDragStart={() => onDragStart(t)}
+        >
           {t.title}
         </div>
       ));
@@ -114,7 +141,6 @@ export default function App() {
     <div style={styles.container}>
       <h1>Project Board({tasks.length})</h1>
 
-      {/* ✅ Create Task Bar */}
       <div style={styles.createBar}>
         <input
           style={styles.input}
@@ -129,17 +155,29 @@ export default function App() {
       </div>
 
       <div style={styles.board}>
-        <div style={styles.column}>
+        <div
+          style={styles.column}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => onDrop("todo")}
+        >
           <div style={styles.title}>TODO</div>
           {renderTasks("todo")}
         </div>
 
-        <div style={styles.column}>
+        <div
+          style={styles.column}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => onDrop("doing")}
+        >
           <div style={styles.title}>DOING</div>
           {renderTasks("doing")}
         </div>
 
-        <div style={styles.column}>
+        <div
+          style={styles.column}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => onDrop("done")}
+        >
           <div style={styles.title}>DONE</div>
           {renderTasks("done")}
         </div>
