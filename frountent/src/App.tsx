@@ -1,66 +1,93 @@
 import { useEffect, useState } from "react";
-import { fetchTasks, createTask, moveTask } from "./services/api";
+import { fetchTasks, createTask, moveTask, deleteTask } from "./services/api";
 
 const styles: any = {
   container: {
     padding: "40px",
     color: "white",
+    background: "linear-gradient(135deg, #283451, #0f0e0a)",
+    minHeight: "100vh",
+  },
+
+  header: {
+    fontSize: "28px",
+    fontWeight: "bold",
+    marginBottom: "20px",
   },
 
   createBar: {
     display: "flex",
     gap: "10px",
-    marginTop: "20px",
-    marginBottom: "20px",
+    marginBottom: "30px",
   },
 
   input: {
     flex: 1,
-    padding: "12px",
-    borderRadius: "8px",
-    border: "1px solid #2a2f3a",
-    background: "#111827",
+    padding: "14px",
+    borderRadius: "10px",
+    border: "1px solid #1f2933",
+    background: "#020617",
     color: "white",
     outline: "none",
+    fontSize: "14px",
   },
 
   button: {
-    padding: "12px 18px",
-    borderRadius: "8px",
+    padding: "14px 22px",
+    borderRadius: "10px",
     border: "none",
-    background: "#2563eb",
+    background: "linear-gradient(135deg, #3b82f6, #2563eb)",
     color: "white",
     cursor: "pointer",
     fontWeight: "bold",
+    transition: "0.2s",
   },
 
   board: {
     display: "flex",
     gap: "20px",
-    width: "100%",
-    marginTop: "20px",
   },
 
   column: {
     flex: 1,
-    background: "#1e293b",
+    background: "rgba(30, 41, 59, 0.6)",
     padding: "20px",
-    borderRadius: "10px",
-    minHeight: "400px",
-    transition: "0.2s",
+    borderRadius: "14px",
+    minHeight: "420px",
+    backdropFilter: "blur(10px)",
+    transition: "0.25s",
+    border: "1px solid rgba(255,255,255,0.05)",
   },
 
-  title: {
+  columnTitle: {
     marginBottom: "15px",
     fontWeight: "bold",
+    letterSpacing: "1px",
+    color: "#94a3b8",
   },
 
   card: {
-    background: "#334155",
-    padding: "10px",
-    borderRadius: "8px",
+    background: "linear-gradient(135deg, #1e293b, #0f172a)",
+    padding: "12px",
+    borderRadius: "10px",
     marginBottom: "10px",
     cursor: "grab",
+    transition: "0.2s",
+    border: "1px solid rgba(255,255,255,0.05)",
+  },
+
+  trashZone: {
+    marginTop: "30px",
+    height: "80px",
+    borderRadius: "14px",
+    border: "2px dashed rgba(239,68,68,0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#ef4444",
+    fontWeight: "bold",
+    fontSize: "18px",
+    transition: "0.2s",
   },
 };
 
@@ -68,58 +95,54 @@ export default function App() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [newTask, setNewTask] = useState("");
   const [draggedTask, setDraggedTask] = useState<any | null>(null);
+  const [hoveredColumn, setHoveredColumn] = useState<string | null>(null);
+  const [trashActive, setTrashActive] = useState(false);
 
   useEffect(() => {
-    fetchTasks()
-      .then(data => {
-        console.log("TASKS FROM API:", data);
-        setTasks(Array.isArray(data) ? data : []);
-      })
-      .catch(err => console.error("API ERROR:", err));
+    fetchTasks().then(setTasks);
   }, []);
 
   const handleCreateTask = async () => {
     if (!newTask.trim()) return;
 
-    try {
-      const created = await createTask(newTask);
-
-      setTasks(prev => [...prev, created]);
-      setNewTask("");
-    } catch (err) {
-      console.error("CREATE TASK ERROR:", err);
-    }
+    const created = await createTask(newTask);
+    setTasks(prev => [...prev, created]);
+    setNewTask("");
   };
 
   const onDragStart = (task: any) => {
     setDraggedTask(task);
   };
 
-  const onDrop = async (status: string) => {
+  const onDropColumn = async (status: string) => {
     if (!draggedTask) return;
 
-    try {
-      const updated = await moveTask(draggedTask.id, status);
+    const updated = await moveTask(draggedTask.id, status);
 
-      setTasks(prev =>
-        prev.map(t => (t.id === updated.id ? updated : t))
-      );
-    } catch (err) {
-      console.error("MOVE ERROR:", err);
-    }
+    setTasks(prev =>
+      prev.map(t => (t.id === updated.id ? updated : t))
+    );
 
     setDraggedTask(null);
+    setHoveredColumn(null);
+  };
+
+  const onDropTrash = async () => {
+    if (!draggedTask) return;
+
+    await deleteTask(draggedTask.id);
+
+    setTasks(prev => prev.filter(t => t.id !== draggedTask.id));
+
+    setDraggedTask(null);
+    setTrashActive(false);
   };
 
   const normalizeStatus = (s: string) => {
     if (!s) return "todo";
-
-    s = s.toLowerCase().trim();
-
-    if (s.includes("todo")) return "todo";
+    s = s.toLowerCase();
     if (s.includes("doing")) return "doing";
     if (s.includes("done")) return "done";
-
     return "todo";
   };
 
@@ -129,7 +152,11 @@ export default function App() {
       .map(t => (
         <div
           key={t.id}
-          style={styles.card}
+          style={{
+            ...styles.card,
+            transform:
+              draggedTask?.id === t.id ? "scale(1.05)" : "scale(1)",
+          }}
           draggable
           onDragStart={() => onDragStart(t)}
         >
@@ -137,16 +164,24 @@ export default function App() {
         </div>
       ));
 
+  const columnStyle = (name: string) => ({
+    ...styles.column,
+    boxShadow:
+      hoveredColumn === name
+        ? "0 0 0 1px rgba(59,130,246,0.4), 0 10px 30px rgba(59,130,246,0.15)"
+        : "none",
+  });
+
   return (
     <div style={styles.container}>
-      <h1>Project Board({tasks.length})</h1>
+      <div style={styles.header}>PROJECT BOARD ({tasks.length})</div>
 
       <div style={styles.createBar}>
         <input
           style={styles.input}
-          placeholder="Enter task title..."
+          placeholder="Create a new task..."
           value={newTask}
-          onChange={(e) => setNewTask(e.target.value)}
+          onChange={e => setNewTask(e.target.value)}
         />
 
         <button style={styles.button} onClick={handleCreateTask}>
@@ -155,32 +190,34 @@ export default function App() {
       </div>
 
       <div style={styles.board}>
-        <div
-          style={styles.column}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={() => onDrop("todo")}
-        >
-          <div style={styles.title}>TODO</div>
-          {renderTasks("todo")}
-        </div>
+        {["todo", "doing", "done"].map(col => (
+          <div
+            key={col}
+            style={columnStyle(col)}
+            onDragOver={e => e.preventDefault()}
+            onDragEnter={() => setHoveredColumn(col)}
+            onDrop={() => onDropColumn(col)}
+          >
+            <div style={styles.columnTitle}>{col.toUpperCase()}</div>
+            {renderTasks(col)}
+          </div>
+        ))}
+      </div>
 
-        <div
-          style={styles.column}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={() => onDrop("doing")}
-        >
-          <div style={styles.title}>DOING</div>
-          {renderTasks("doing")}
-        </div>
-
-        <div
-          style={styles.column}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={() => onDrop("done")}
-        >
-          <div style={styles.title}>DONE</div>
-          {renderTasks("done")}
-        </div>
+      {/* 🗑️ Trash Zone */}
+      <div
+        style={{
+          ...styles.trashZone,
+          background: trashActive ? "rgba(239,68,68,0.1)" : "transparent",
+        }}
+        onDragOver={e => {
+          e.preventDefault();
+          setTrashActive(true);
+        }}
+        onDragLeave={() => setTrashActive(false)}
+        onDrop={onDropTrash}
+      >
+        🗑️ Drop Here To Drop Project
       </div>
     </div>
   );
