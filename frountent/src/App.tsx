@@ -4,27 +4,23 @@ import Register from "./pages/register";
 import Dashboard from "./pages/dashboard";
 
 export default function App() {
-  const [screen, setScreen] = useState("login");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) setScreen("dashboard");
+    if (token) setIsAuthenticated(true);
   }, []);
 
-  if (screen === "login") {
+  if (!isAuthenticated) {
+    if (showRegister) {
+      return <Register onBack={() => setShowRegister(false)} />;
+    }
+
     return (
       <Login
-        onLogin={() => setScreen("dashboard")}
-        onShowRegister={() => setScreen("register")}
-      />
-    );
-  }
-
-  if (screen === "register") {
-    return (
-      <Register
-        onBackToLogin={() => setScreen("login")}
-        onRegisterSuccess={() => setScreen("dashboard")}
+        onLogin={() => setIsAuthenticated(true)}
+        onShowRegister={() => setShowRegister(true)}
       />
     );
   }
