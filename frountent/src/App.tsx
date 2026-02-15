@@ -1,22 +1,32 @@
 import { useEffect, useState } from "react";
 import Login from "./pages/login";
+import Register from "./pages/register";
 import Dashboard from "./pages/dashboard";
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [screen, setScreen] = useState("login");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-
-    if (token) {
-      setIsAuthenticated(true);
-    }
+    if (token) setScreen("dashboard");
   }, []);
 
+  if (screen === "login") {
+    return (
+      <Login
+        onLogin={() => setScreen("dashboard")}
+        onShowRegister={() => setScreen("register")}
+      />
+    );
+  }
 
-
-  if (!isAuthenticated) {
-    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  if (screen === "register") {
+    return (
+      <Register
+        onBackToLogin={() => setScreen("login")}
+        onRegisterSuccess={() => setScreen("dashboard")}
+      />
+    );
   }
 
   return <Dashboard />;

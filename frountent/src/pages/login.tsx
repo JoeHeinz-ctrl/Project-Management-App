@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { loginUser } from "../services/api";
 
-export default function Login({ onLogin }: any) {
+export default function Login({ onLogin ,onShowRegister }: any) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -38,6 +38,12 @@ export default function Login({ onLogin }: any) {
       />
 
       <button onClick={handleLogin}>Login</button>
+      <p
+         style={{ cursor: "pointer", marginTop: 20 }}
+         onClick={() => onShowRegister()}
+        >
+       Create account
+      </p>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
     </div>
