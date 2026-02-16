@@ -6,6 +6,26 @@ export async function fetchTasks() {
   return res.json();
 }
 
+export async function registerUser(name: string, email: string, password: string) {
+  const res = await fetch("http://127.0.0.1:8000/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: name,
+      email: email,
+      password: password,
+    }),
+  });
+const data = await res.json();
+  if (!res.ok) {
+    throw new Error("Registration failed");
+  }
+
+  return res.json();
+}
+
+
+
 export async function loginUser(email: string, password: string) {
   const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",

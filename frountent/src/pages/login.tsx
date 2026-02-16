@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { loginUser } from "../services/api";
+import { loginUser } from "../services/authService";
 
-export default function Login({ onLogin }: any) {
+export default function Login({ onLogin, onShowRegister }: any) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -13,10 +13,9 @@ export default function Login({ onLogin }: any) {
       const data = await loginUser(email, password);
 
       localStorage.setItem("token", data.access_token);
-
       onLogin();
-    } catch (err) {
-      setError("Invalid email or password");
+    } catch (err: any) {
+      setError(err.message || "Login failed");
     }
   };
 
@@ -40,6 +39,13 @@ export default function Login({ onLogin }: any) {
       <button onClick={handleLogin}>Login</button>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
+
+      <p
+        style={{ cursor: "pointer", marginTop: 20 }}
+        onClick={onShowRegister}
+      >
+        Create account
+      </p>
     </div>
   );
 }
