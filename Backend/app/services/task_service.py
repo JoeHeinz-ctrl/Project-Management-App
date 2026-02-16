@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.task import Task
+from app.models.project import Project
+
 
 class TaskService:
 
@@ -10,3 +12,12 @@ class TaskService:
         db.commit()
         db.refresh(task)
         return task
+
+    @staticmethod
+    def get_tasks_for_user(db: Session, user_id: int):
+        return (
+            db.query(Task)
+            .join(Project, Task.project_id == Project.id)
+            .filter(Project.owner_id == user_id)
+            .all()
+        )

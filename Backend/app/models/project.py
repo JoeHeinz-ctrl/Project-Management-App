@@ -8,6 +8,9 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
 
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    owner = relationship("User")
+    tasks = relationship("Task", back_populates="project", cascade="all, delete")
+
+    owner = relationship("User", back_populates="projects")
+
