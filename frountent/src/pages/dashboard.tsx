@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchTasks, createTask, moveTask, deleteTask } from "../services/api";
+import ProjectBoard from "./projectboard";
 
 const styles: any = {
   container: {
@@ -168,23 +169,43 @@ const styles: any = {
 };
 
 export default function App() {
+  
   const [tasks, setTasks] = useState<any[]>([]);
   const [newTask, setNewTask] = useState("");
+  const [selectedProject, setSelectedProject] = useState<any | null>(null);
+  
   const [draggedTask, setDraggedTask] = useState<any | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [trashActive, setTrashActive] = useState(false);
 
-  useEffect(() => {
-    fetchTasks().then(setTasks);
-  }, []);
+  
+
+
+useEffect(() => {
+  if (!selectedProject) {
+    setTasks([]);
+    return;
+  }
+
+  fetchTasks(selectedProject.id)
+    .then(setTasks)
+    .catch(() => setTasks([]));
+}, [selectedProject]);
+
 
   const handleCreateTask = async () => {
-    if (!newTask.trim()) return;
+  if (!newTask.trim()) return;
 
-    const created = await createTask(newTask);
-    setTasks((prev) => [...prev, created]);
-    setNewTask("");
-  };
+  if (!selectedProject) {
+    alert("Select a project first");
+    return;
+  }
+  const created = await createTask(newTask, selectedProject.id);
+
+  setTasks((prev) => [...prev, created]);
+  setNewTask("");
+};
+
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -283,6 +304,8 @@ export default function App() {
 
   return (
     <div style={styles.container}>
+      <ProjectBoard onSelect={setSelectedProject} />
+
       <div>
         <div style={styles.header}>Project Board</div>
         <div style={styles.subheader}>{tasks.length} total tasks</div>

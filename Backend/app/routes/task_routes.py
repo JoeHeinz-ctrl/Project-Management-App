@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -27,7 +27,7 @@ def create_task(
     )
 
     if not project:
-        return {"error": "Project not found or not authorized"}
+        raise HTTPException(status_code=404, detail="Project not found or not authorized")
 
     return TaskService.create_task(
         db=db,
@@ -67,7 +67,7 @@ def move_task(
     )
 
     if not task:
-        return {"error": "Task not found or not authorized"}
+        raise HTTPException(status_code=404, detail="Task not found or not authorized")
 
     task.status = status
     db.commit()
@@ -91,7 +91,7 @@ def delete_task(
     )
 
     if not task:
-        return {"error": "Task not found or not authorized"}
+        raise HTTPException(status_code=404, detail="Task not found or not authorized")
 
     db.delete(task)
     db.commit()

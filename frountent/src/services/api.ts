@@ -54,22 +54,25 @@ export async function loginUser(email: string, password: string) {
 
 /* ---------------- TASKS ---------------- */
 
-export async function fetchTasks() {
+export async function fetchTasks(projectId: number) {
   const res = await fetch(`${API_URL}/tasks/`, {
-    headers: getAuthHeaders(),          // ✅ AUTH ADDED
+    headers: getAuthHeaders(),
   });
 
-  return handleResponse(res);
+  const data = await handleResponse(res);
+
+  // client-side filter (safe even if backend already filters)
+  return data.filter((t: any) => t.project_id === projectId);
 }
 
-export async function createTask(title: string) {
+export async function createTask(title: string, projectId: number) {
   const res = await fetch(`${API_URL}/tasks/`, {
     method: "POST",
-    headers: getAuthHeaders(),          // ✅ AUTH ADDED
+    headers: getAuthHeaders(),
     body: JSON.stringify({
       title,
       status: "TODO",
-      project_id: 1,
+      project_id: projectId,   // ✅ dynamic
     }),
   });
 
@@ -89,6 +92,24 @@ export async function deleteTask(taskId: number) {
   const res = await fetch(`${API_URL}/tasks/${taskId}`, {
     method: "DELETE",
     headers: getAuthHeaders(),          // ✅ AUTH ADDED
+  });
+
+  return handleResponse(res);
+}
+
+export async function fetchProjects() {
+  const res = await fetch(`${API_URL}/projects/`, {
+    headers: getAuthHeaders(),
+  });
+
+  return handleResponse(res);
+}
+
+export async function createProject(title: string) {
+  const res = await fetch(`${API_URL}/projects/`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ title }),
   });
 
   return handleResponse(res);
