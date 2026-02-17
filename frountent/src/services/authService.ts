@@ -27,5 +27,11 @@ export async function loginUser(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
 
-  return handleResponse(res);
+  const data = await handleResponse(res);
+
+  // ✅ CRITICAL LINE — STORE TOKEN
+  localStorage.setItem("token", data.access_token);
+
+  return data;
 }
+

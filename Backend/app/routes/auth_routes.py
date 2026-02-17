@@ -16,18 +16,27 @@ from app.core.security import hash_password, verify_password, create_access_toke
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
+        user_id = payload.get("sub")
 
-        if email is None:
+        if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-
-        return email
 
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(User).filter(User.id == int(user_id)).first()
+
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return user
+
     
 
 
@@ -62,7 +71,8 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     if not verify_password(user.password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_access_token({"sub": db_user.email})
+    token = create_access_token({"sub": str(db_user.id)})
+
 
     return {
         "access_token": token,
@@ -75,7 +85,10 @@ def auth_health():
     return {"status": "Auth service OK"}
 
 @router.get("/me")
-def get_me(current_user: str = Depends(get_current_user)):
+def get_me(current_user: User = Depends(get_current_user)):
     return {
-        "email": current_user
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.name
     }
+
