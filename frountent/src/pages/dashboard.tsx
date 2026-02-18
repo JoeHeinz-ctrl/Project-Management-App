@@ -168,13 +168,12 @@ const styles: any = {
   },
 };
 
-export default function App() {
+export default function Dashboard({ onBack }: any) {
   
   const [tasks, setTasks] = useState<any[]>([]);
   const [newTask, setNewTask] = useState("");
-  const [selectedProject, setSelectedProject] = useState<any | null>(null);
-  
   const [draggedTask, setDraggedTask] = useState<any | null>(null);
+  const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [trashActive, setTrashActive] = useState(false);
 
@@ -304,7 +303,10 @@ useEffect(() => {
 
   return (
     <div style={styles.container}>
+      
+      <div style={{ marginBottom: 30 }}>
       <ProjectBoard onSelect={setSelectedProject} />
+    </div>
 
       <div>
         <div style={styles.header}>Project Board</div>
