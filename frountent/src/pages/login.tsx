@@ -9,19 +9,29 @@ export default function Login({ onLogin, onShowRegister }: any) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    setError("");
-    setIsLoading(true);
+  setError("");
+  setIsLoading(true);
 
-    try {
-      const data = await loginUser(email, password);
-      localStorage.setItem("token", data.access_token);
-      onLogin();
-    } catch (err: any) {
-      setError(err.message || "Login failed");
-    } finally {
-      setIsLoading(false);
+  try {
+    const data = await loginUser(email, password);
+    
+    // ✅ Safety check (VERY important)
+    if (!data?.access_token) {
+      throw new Error("Invalid server response");
     }
-  };
+
+    // ✅ Store token
+    localStorage.setItem("token", data.access_token);
+
+    // ✅ Notify app (redirect / state update)
+    onLogin();
+
+  } catch (err: any) {
+    setError(err.message || "Login failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {

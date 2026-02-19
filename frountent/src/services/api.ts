@@ -97,20 +97,44 @@ export async function deleteTask(taskId: number) {
   return handleResponse(res);
 }
 
-export async function fetchProjects() {
-  const res = await fetch(`${API_URL}/projects/`, {
-    headers: getAuthHeaders(),
-  });
-
-  return handleResponse(res);
-}
-
 export async function createProject(title: string) {
-  const res = await fetch(`${API_URL}/projects/`, {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch("http://127.0.0.1:8000/projects/", {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,   // ⭐ REQUIRED
+    },
     body: JSON.stringify({ title }),
   });
 
-  return handleResponse(res);
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to create project");
+  }
+
+  return data;
 }
+
+
+export async function fetchProjects() {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch("http://127.0.0.1:8000/projects/", {
+    headers: {
+      Authorization: `Bearer ${token}`,   // ⭐ REQUIRED
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Failed to fetch projects");
+  }
+
+  return data;
+}
+
+
