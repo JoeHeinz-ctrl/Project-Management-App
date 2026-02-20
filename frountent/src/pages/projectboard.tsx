@@ -27,9 +27,10 @@ export default function ProjectBoard({ onSelect }: any) {
       await createProject(title);
       setTitle("");
       loadProjects(); // refresh list
-    } catch (err) {
-      alert("Failed to create project");
-    }
+    } catch (err: any) {
+  console.error(err);
+  alert(err.message);
+}
   }
 
   return (

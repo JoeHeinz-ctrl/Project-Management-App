@@ -1,12 +1,16 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
+# -------- PROJECT --------
+class ProjectCreate(BaseModel):
+    title: str
+
+# -------- TASK --------
 class TaskCreate(BaseModel):
     title: str
     status: str = "todo"
     project_id: int
 
-from pydantic import BaseModel, EmailStr
-
+# -------- USER --------
 class UserCreate(BaseModel):
     name: str
     email: EmailStr

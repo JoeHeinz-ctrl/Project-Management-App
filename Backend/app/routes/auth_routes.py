@@ -1,9 +1,17 @@
+import token
+import requests
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
+from google.oauth2 import id_token
+from google.auth.transport import requests as grequests
+from fastapi import HTTPException
 
+GOOGLE_CLIENT_ID = "joel-test-app-123456.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "heinz-otto-secret"
 from app.core.config import SECRET_KEY, ALGORITHM
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -76,6 +84,61 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
     return {
         "access_token": token,
+        "token_type": "bearer"
+    }
+
+
+@router.post("/google")
+def google_auth(payload: dict, db: Session = Depends(get_db)):
+    code = payload.get("code")
+
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing Google code")
+
+    token_res = requests.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": "postmessage",
+            "grant_type": "authorization_code",
+        },
+    )
+
+    tokens = token_res.json()
+
+    if "id_token" not in tokens:
+        raise HTTPException(status_code=400, detail="Google token exchange failed")
+
+    idinfo = id_token.verify_oauth2_token(
+        tokens["id_token"],
+        grequests.Request(),
+        GOOGLE_CLIENT_ID,
+    )
+
+    email = idinfo["email"]
+    name = idinfo.get("name", "Google User")
+
+    # ✅ find existing user
+    user = db.query(User).filter(User.email == email).first()
+
+    # ✅ create if missing
+    if not user:
+        user = User(
+            name=name,
+            email=email,
+            password=""  # no password for Google users
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    # ✅ issue JWT EXACTLY like normal login
+    access_token = create_access_token({"sub": str(user.id)})
+
+    return {
+        "access_token": access_token,
         "token_type": "bearer"
     }
 

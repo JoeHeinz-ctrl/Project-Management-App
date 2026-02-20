@@ -37,6 +37,28 @@ export async function registerUser(name: string, email: string, password: string
   return handleResponse(res);
 }
 
+export async function googleLogin(code: string) {
+  const res = await fetch(`/auth/google`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ code }), // ✅ FIXED
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.detail || "Google login failed");
+  }
+
+  localStorage.setItem("token", data.access_token);
+
+  return data;
+}
+
+
+
 export async function loginUser(email: string, password: string) {
   const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
