@@ -168,12 +168,12 @@ const styles: any = {
   },
 };
 
-export default function Dashboard({ onBack }: any) {
+export default function Dashboard({ project, backToProjects }: any) {
   
   const [tasks, setTasks] = useState<any[]>([]);
   const [newTask, setNewTask] = useState("");
   const [draggedTask, setDraggedTask] = useState<any | null>(null);
-  const [selectedProject, setSelectedProject] = useState<any | null>(null);
+  
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [trashActive, setTrashActive] = useState(false);
 
@@ -181,25 +181,25 @@ export default function Dashboard({ onBack }: any) {
 
 
 useEffect(() => {
-  if (!selectedProject) {
+  if (!project) {
     setTasks([]);
     return;
   }
 
-  fetchTasks(selectedProject.id)
+  fetchTasks(project.id)
     .then(setTasks)
     .catch(() => setTasks([]));
-}, [selectedProject]);
+}, [project]);
 
 
   const handleCreateTask = async () => {
   if (!newTask.trim()) return;
 
-  if (!selectedProject) {
+  if (!project) {
     alert("Select a project first");
     return;
   }
-  const created = await createTask(newTask, selectedProject.id);
+  const created = await createTask(newTask, project.id);
 
   setTasks((prev) => [...prev, created]);
   setNewTask("");
@@ -304,9 +304,7 @@ useEffect(() => {
   return (
     <div style={styles.container}>
       
-      <div style={{ marginBottom: 30 }}>
-      <ProjectBoard onSelect={setSelectedProject} />
-    </div>
+      <button onClick={backToProjects}>← Back to Projects</button>
 
       <div>
         <div style={styles.header}>Project Board</div>
