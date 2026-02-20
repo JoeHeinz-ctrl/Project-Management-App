@@ -38,7 +38,7 @@ export async function registerUser(name: string, email: string, password: string
 }
 
 export async function googleLogin(code: string) {
-  const res = await fetch(`${API_URL}/auth/google`, {
+  const res = await fetch(`/auth/google`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
