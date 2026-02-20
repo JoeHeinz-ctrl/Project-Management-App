@@ -10,8 +10,8 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as grequests
 from fastapi import HTTPException
 
-GOOGLE_CLIENT_ID = "335846643539-am8i2gne8ajsu3sbgfomb61pp26dr6ir.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET = "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"
+GOOGLE_CLIENT_ID = "joel-test-app-123456.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "heinz-otto-secret"
 from app.core.config import SECRET_KEY, ALGORITHM
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
