@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { loginUser } from "../services/authService";
+import { useGoogleLogin } from "@react-oauth/google";
+import { googleLogin } from "../services/api"; // backend call
+
 
 export default function Login({ onLogin, onShowRegister }: any) {
   const [email, setEmail] = useState("");
@@ -7,6 +10,22 @@ export default function Login({ onLogin, onShowRegister }: any) {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const loginWithGoogle = useGoogleLogin({
+  flow: "auth-code",   // ⭐ CHANGE THIS
+  onSuccess: async (codeResponse) => {
+    try {
+      console.log("Google Code →", codeResponse);
+
+      await googleLogin(codeResponse.code);  // ⭐ SEND CODE
+
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert("Google login failed");
+    }
+  },
+});
 
   const handleLogin = async () => {
   setError("");
@@ -32,6 +51,8 @@ export default function Login({ onLogin, onShowRegister }: any) {
     setIsLoading(false);
   }
 };
+
+
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -140,7 +161,7 @@ export default function Login({ onLogin, onShowRegister }: any) {
             <span style={styles.dividerLine}></span>
           </div>
 
-          <button style={styles.googleButton}>
+          <button style={styles.googleButton} onClick={() => loginWithGoogle()}>
             <svg
               width="18"
               height="18"
