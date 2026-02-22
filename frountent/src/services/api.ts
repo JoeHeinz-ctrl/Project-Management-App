@@ -87,14 +87,14 @@ export async function fetchTasks(projectId: number) {
   return data.filter((t: any) => t.project_id === projectId);
 }
 
-export async function createTask(title: string, projectId: number) {
+export async function createTask(title: string, projectId: number, status: string = "TODO") {
   const res = await fetch(`${API_URL}/tasks/`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({
       title,
-      status: "TODO",
-      project_id: projectId,   // ✅ dynamic
+      status, // ✅ dynamic
+      project_id: projectId,
     }),
   });
 
@@ -146,7 +146,7 @@ export async function fetchProjects() {
 
   const res = await fetch("http://127.0.0.1:8000/projects/", {
     headers: {
-      Authorization: `Bearer ${token}`,   // ⭐ REQUIRED
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -157,6 +157,23 @@ export async function fetchProjects() {
   }
 
   return data;
+}
+
+export async function renameProject(projectId: number, title: string) {
+  const res = await fetch(`http://127.0.0.1:8000/projects/${projectId}`, {
+    method: "PATCH",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ title }),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteProject(projectId: number) {
+  const res = await fetch(`http://127.0.0.1:8000/projects/${projectId}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
 }
 
 
