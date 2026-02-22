@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchTasks, createTask, moveTask, deleteTask } from "../services/api";
+import { fetchTasks, createTask, moveTask, deleteTask, renameTask } from "../services/api";
 
 
 const styles: any = {
@@ -75,6 +75,18 @@ const styles: any = {
     justifyContent: "center",
   },
 
+  taskEditBtn: {
+    background: "transparent",
+    border: "none",
+    color: "#666666",
+    fontSize: "14px",
+    cursor: "pointer",
+    padding: "4px",
+    transition: "all 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   board: {
     display: "flex",
     gap: "16px",
@@ -156,7 +168,7 @@ const styles: any = {
   },
 
   cardDragging: {
-    transform: "scale(1.05) rotate(2deg)",
+    transform: "scale(1.05)",
     boxShadow:
       "8px 8px 20px rgba(0, 0, 0, 0.6), -4px -4px 12px rgba(60, 60, 60, 0.1)",
     background: "#2f2f2f",
@@ -283,6 +295,7 @@ export default function Dashboard({ project, backToProjects }: any) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [createPromptCol, setCreatePromptCol] = useState<string | null>(null);
   const [createTaskTitle, setCreateTaskTitle] = useState("");
+  const [editTaskData, setEditTaskData] = useState<{ id: number, title: string } | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -336,6 +349,28 @@ export default function Dashboard({ project, backToProjects }: any) {
       setAlertMessage("Failed to delete task");
     } finally {
       setDeleteConfirmId(null);
+    }
+  };
+
+  const promptEditTask = (e: React.MouseEvent, task: any) => {
+    e.stopPropagation();
+    setEditTaskData({ id: task.id, title: task.title });
+  };
+
+  const confirmEditTask = async () => {
+    if (!editTaskData) return;
+    const title = editTaskData.title.trim();
+    if (!title) {
+      setEditTaskData(null);
+      return;
+    }
+    try {
+      const updated = await renameTask(editTaskData.id, title);
+      setTasks((prev) => prev.map((t) => (t.id === editTaskData.id ? updated : t)));
+    } catch (err: any) {
+      setAlertMessage("Failed to edit task");
+    } finally {
+      setEditTaskData(null);
     }
   };
 
@@ -396,16 +431,27 @@ export default function Dashboard({ project, backToProjects }: any) {
         onDragStart={() => onDragStart(t)}
         onDragEnd={onDragEnd}
       >
-        <span>{t.title}</span>
-        <button
-          style={styles.taskDeleteBtn}
-          title="Delete task"
-          onClick={(e) => onClickDeleteTask(e, t.id)}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "#ff6b6b"; e.currentTarget.style.background = "rgba(255, 68, 68, 0.1)"; e.currentTarget.style.borderRadius = "6px"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = "#666666"; e.currentTarget.style.background = "transparent"; }}
-        >
-          🗑️
-        </button>
+        <span style={{ flex: 1, paddingRight: "8px" }}>{t.title}</span>
+        <div style={{ display: "flex", gap: "2px" }}>
+          <button
+            style={styles.taskEditBtn}
+            title="Edit task"
+            onClick={(e) => promptEditTask(e, t)}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "#0b7de0"; e.currentTarget.style.background = "rgba(11, 125, 224, 0.1)"; e.currentTarget.style.borderRadius = "6px"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "#666666"; e.currentTarget.style.background = "transparent"; }}
+          >
+            ✏️
+          </button>
+          <button
+            style={styles.taskDeleteBtn}
+            title="Delete task"
+            onClick={(e) => onClickDeleteTask(e, t.id)}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "#ff6b6b"; e.currentTarget.style.background = "rgba(255, 68, 68, 0.1)"; e.currentTarget.style.borderRadius = "6px"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = "#666666"; e.currentTarget.style.background = "transparent"; }}
+          >
+            🗑️
+          </button>
+        </div>
       </div>
     ));
   };
@@ -451,6 +497,37 @@ export default function Dashboard({ project, backToProjects }: any) {
                 onMouseEnter={(e) => { e.currentTarget.style.background = "#ff6b6b"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "#ff4444"; e.currentTarget.style.transform = "translateY(0)"; }}
               >Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Modal */}
+      {editTaskData !== null && (
+        <div style={styles.modalOverlay} onClick={() => setEditTaskData(null)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 style={styles.modalTitle}>Edit Task</h3>
+            <input
+              style={styles.modalInput}
+              autoFocus
+              placeholder="What needs to be done?"
+              value={editTaskData.title}
+              onChange={(e) => setEditTaskData({ ...editTaskData, title: e.target.value })}
+              onKeyDown={(e) => { if (e.key === "Enter") confirmEditTask(); if (e.key === "Escape") setEditTaskData(null); }}
+            />
+            <div style={styles.modalButtons}>
+              <button
+                style={styles.btnSecondary}
+                onClick={() => setEditTaskData(null)}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; }}
+              >Cancel</button>
+              <button
+                style={styles.btnPrimary}
+                onClick={confirmEditTask}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#1a8cf0"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#0b7de0"; e.currentTarget.style.transform = "translateY(0)"; }}
+              >Save</button>
             </div>
           </div>
         </div>
@@ -513,7 +590,7 @@ export default function Dashboard({ project, backToProjects }: any) {
       >← Back to Projects</button>
 
       <div>
-        <div style={styles.header}>Project Board</div>
+        <div style={styles.header}>{project ? project.title : "Project Board"}</div>
         <div style={styles.subheader}>{tasks.length} total tasks</div>
       </div>
 

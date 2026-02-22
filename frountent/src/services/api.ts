@@ -113,7 +113,16 @@ export async function moveTask(taskId: number, status: string) {
 export async function deleteTask(taskId: number) {
   const res = await fetch(`${API_URL}/tasks/${taskId}`, {
     method: "DELETE",
-    headers: getAuthHeaders(),          // ✅ AUTH ADDED
+    headers: getAuthHeaders(),
+  });
+
+  return handleResponse(res);
+}
+
+export async function renameTask(taskId: number, title: string) {
+  const res = await fetch(`${API_URL}/tasks/${taskId}?title=${encodeURIComponent(title)}`, {
+    method: "PATCH",
+    headers: getAuthHeaders(),
   });
 
   return handleResponse(res);
