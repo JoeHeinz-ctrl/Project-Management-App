@@ -97,3 +97,27 @@ def delete_task(
     db.commit()
 
     return {"success": True}
+
+# ✅ RENAME TASK (Ownership Protected)
+@router.patch("/{task_id}")
+def rename_task(
+    task_id: int,
+    title: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    task = (
+        db.query(Task)
+        .join(Project, Task.project_id == Project.id)
+        .filter(Task.id == task_id, Project.owner_id == current_user.id)
+        .first()
+    )
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found or not authorized")
+
+    task.title = title
+    db.commit()
+    db.refresh(task)
+
+    return task
