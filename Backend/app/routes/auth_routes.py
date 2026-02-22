@@ -10,8 +10,8 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as grequests
 from fastapi import HTTPException
 
-GOOGLE_CLIENT_ID = "joel-test-app-123456.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET = "heinz-otto-secret"
+GOOGLE_CLIENT_ID = "335846643539-am8i2gne8ajsu3sbgfomb61pp26dr6ir.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "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"
 from app.core.config import SECRET_KEY, ALGORITHM
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -106,10 +106,16 @@ def google_auth(payload: dict, db: Session = Depends(get_db)):
         },
     )
 
+    print("GOOGLE STATUS:", token_res.status_code)   # ⭐ ADD
+    print("GOOGLE BODY:", token_res.text)            # ⭐ ADD
+
+    if token_res.status_code != 200:
+        raise HTTPException(status_code=400, detail="Google token exchange failed")
+
     tokens = token_res.json()
 
     if "id_token" not in tokens:
-        raise HTTPException(status_code=400, detail="Google token exchange failed")
+        raise HTTPException(status_code=400, detail="No id_token returned by Google")
 
     idinfo = id_token.verify_oauth2_token(
         tokens["id_token"],
@@ -120,28 +126,20 @@ def google_auth(payload: dict, db: Session = Depends(get_db)):
     email = idinfo["email"]
     name = idinfo.get("name", "Google User")
 
-    # ✅ find existing user
     user = db.query(User).filter(User.email == email).first()
 
-    # ✅ create if missing
     if not user:
-        user = User(
-            name=name,
-            email=email,
-            password=""  # no password for Google users
-        )
+        user = User(name=name, email=email, password="")
         db.add(user)
         db.commit()
         db.refresh(user)
 
-    # ✅ issue JWT EXACTLY like normal login
     access_token = create_access_token({"sub": str(user.id)})
 
     return {
         "access_token": access_token,
         "token_type": "bearer"
     }
-
 
 @router.get("/health")
 def auth_health():

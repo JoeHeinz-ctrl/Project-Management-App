@@ -32,7 +32,7 @@ export default function App() {
   if (!selectedProject) {
     return (
       <ProjectBoard
-        setSelectedProject={setSelectedProject}
+        onSelect={setSelectedProject}
       />
     );
   }
