@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+
+
 import Login from "./pages/login";
 import Register from "./pages/register";
 import ProjectBoard from "./pages/projectboard";
@@ -14,34 +16,50 @@ export default function App() {
     if (token) setIsAuthenticated(true);
   }, []);
 
-  // NOT LOGGED IN
+  const Header = () => (
+    <div className="app-header">
+      
+      <span>Synq</span>
+    </div>
+  );
+
   if (!isAuthenticated) {
     if (showRegister) {
-      return <Register onBack={() => setShowRegister(false)} />;
+      return (
+        <>
+          <Header />
+          <Register onBack={() => setShowRegister(false)} />
+        </>
+      );
     }
 
     return (
-      <Login
-        onLogin={() => setIsAuthenticated(true)}
-        onShowRegister={() => setShowRegister(true)}
-      />
+      <>
+        <Header />
+        <Login
+          onLogin={() => setIsAuthenticated(true)}
+          onShowRegister={() => setShowRegister(true)}
+        />
+      </>
     );
   }
 
-  // LOGGED IN BUT NO PROJECT SELECTED
   if (!selectedProject) {
     return (
-      <ProjectBoard
-        onSelect={setSelectedProject}
-      />
+      <>
+        <Header />
+        <ProjectBoard onSelect={setSelectedProject} />
+      </>
     );
   }
 
-  // PROJECT SELECTED → DASHBOARD
   return (
-    <Dashboard
-      project={selectedProject}
-      backToProjects={() => setSelectedProject(null)}
-    />
+    <>
+      <Header />
+      <Dashboard
+        project={selectedProject}
+        backToProjects={() => setSelectedProject(null)}
+      />
+    </>
   );
 }
