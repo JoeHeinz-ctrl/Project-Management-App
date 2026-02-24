@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { fetchTasks, createTask, moveTask, deleteTask, renameTask } from "../services/api";
+import { useEffect, useRef, useState } from "react";
+import { fetchTasks, createTask, moveTask, deleteTask, renameTask, reorderTasks } from "../services/api";
 
 
 const styles: any = {
@@ -87,6 +87,7 @@ const styles: any = {
     alignItems: "center",
     justifyContent: "center",
   },
+
   board: {
     display: "flex",
     gap: "16px",
@@ -103,8 +104,7 @@ const styles: any = {
     display: "flex",
     flexDirection: "column",
     transition: "all 0.3s ease",
-    boxShadow:
-      "8px 8px 16px rgba(0, 0, 0, 0.5), -8px -8px 16px rgba(60, 60, 60, 0.05)",
+    boxShadow: "8px 8px 16px rgba(0, 0, 0, 0.5), -8px -8px 16px rgba(60, 60, 60, 0.05)",
     overflow: "hidden",
   },
 
@@ -144,8 +144,7 @@ const styles: any = {
     fontSize: "12px",
     fontWeight: "600",
     color: "#0b7de0",
-    boxShadow:
-      "inset 3px 3px 6px rgba(0, 0, 0, 0.3), inset -3px -3px 6px rgba(60, 60, 60, 0.1)",
+    boxShadow: "inset 3px 3px 6px rgba(0, 0, 0, 0.3), inset -3px -3px 6px rgba(60, 60, 60, 0.1)",
   },
 
   card: {
@@ -154,12 +153,11 @@ const styles: any = {
     borderRadius: "12px",
     marginBottom: "8px",
     cursor: "grab",
-    transition: "all 0.2s ease",
+    transition: "all 0.15s ease",
     color: "#ffffff",
     fontSize: "13px",
     userSelect: "none",
-    boxShadow:
-      "6px 6px 12px rgba(0, 0, 0, 0.4), -6px -6px 12px rgba(60, 60, 60, 0.05)",
+    boxShadow: "6px 6px 12px rgba(0, 0, 0, 0.4), -6px -6px 12px rgba(60, 60, 60, 0.05)",
     position: "relative",
     flexShrink: 1,
     display: "flex",
@@ -167,14 +165,14 @@ const styles: any = {
     alignItems: "center",
   },
 
-  cardDragging: {
-    transform: "scale(1.05)",
-    boxShadow:
-      "8px 8px 20px rgba(0, 0, 0, 0.6), -4px -4px 12px rgba(60, 60, 60, 0.1)",
-    background: "#2f2f2f",
+  dropIndicator: {
+    height: "2px",
+    borderRadius: "2px",
+    background: "#0b7de0",
+    marginBottom: "8px",
+    transition: "opacity 0.15s ease",
+    boxShadow: "0 0 6px rgba(11,125,224,0.6)",
   },
-
-
 
   emptyState: {
     display: "flex",
@@ -195,10 +193,7 @@ const styles: any = {
 
   modalOverlay: {
     position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     background: "rgba(0,0,0,0.6)",
     backdropFilter: "blur(4px)",
     display: "flex",
@@ -218,24 +213,9 @@ const styles: any = {
     flexDirection: "column",
     gap: "20px",
   },
-  modalTitle: {
-    fontSize: "20px",
-    fontWeight: "600",
-    color: "#fff",
-    margin: 0,
-  },
-  modalText: {
-    fontSize: "15px",
-    color: "#b3b3b3",
-    margin: 0,
-    lineHeight: "1.5",
-  },
-  modalButtons: {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: "12px",
-    marginTop: "10px",
-  },
+  modalTitle: { fontSize: "20px", fontWeight: "600", color: "#fff", margin: 0 },
+  modalText: { fontSize: "15px", color: "#b3b3b3", margin: 0, lineHeight: "1.5" },
+  modalButtons: { display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "10px" },
   modalInput: {
     width: "100%",
     padding: "16px 20px",
@@ -249,148 +229,191 @@ const styles: any = {
     boxSizing: "border-box",
   },
   btnPrimary: {
-    padding: "12px 24px",
-    borderRadius: "10px",
-    border: "none",
-    background: "#0b7de0",
-    color: "white",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
+    padding: "12px 24px", borderRadius: "10px", border: "none",
+    background: "#0b7de0", color: "white", cursor: "pointer",
+    fontWeight: "600", fontSize: "14px",
     boxShadow: "4px 4px 8px rgba(0,0,0,0.4), -4px -4px 8px rgba(60,60,60,0.05)",
     transition: "all 0.2s ease",
   },
   btnDanger: {
-    padding: "12px 24px",
-    borderRadius: "10px",
-    border: "none",
-    background: "#ff4444",
-    color: "white",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
+    padding: "12px 24px", borderRadius: "10px", border: "none",
+    background: "#ff4444", color: "white", cursor: "pointer",
+    fontWeight: "600", fontSize: "14px",
     boxShadow: "4px 4px 8px rgba(0,0,0,0.4), -4px -4px 8px rgba(60,60,60,0.05)",
     transition: "all 0.2s ease",
   },
   btnSecondary: {
-    padding: "12px 24px",
-    borderRadius: "10px",
-    border: "none",
-    background: "transparent",
-    color: "#b3b3b3",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "14px",
-    transition: "all 0.2s ease",
+    padding: "12px 24px", borderRadius: "10px", border: "none",
+    background: "transparent", color: "#b3b3b3", cursor: "pointer",
+    fontWeight: "600", fontSize: "14px", transition: "all 0.2s ease",
   },
 };
 
 export default function Dashboard({ project, backToProjects }: any) {
 
   const [tasks, setTasks] = useState<any[]>([]);
+
+  // ── drag state ────────────────────────────────────────────────────────────
+  // draggedTask    – the task being dragged
+  // dragOverCol    – which column is highlighted (for cross-column drops)
+  // dragOverTaskId – the task the cursor is currently above (for reorder indicator)
   const [draggedTask, setDraggedTask] = useState<any | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<number | null>(null);
 
   // Custom Modal States
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [createPromptCol, setCreatePromptCol] = useState<string | null>(null);
   const [createTaskTitle, setCreateTaskTitle] = useState("");
-  const [editTaskData, setEditTaskData] = useState<{ id: number, title: string } | null>(null);
+  const [editTaskData, setEditTaskData] = useState<{ id: number; title: string } | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
+  // keep a ref we can read inside drag handlers (avoids stale closures)
+  const tasksRef = useRef(tasks);
+  useEffect(() => { tasksRef.current = tasks; }, [tasks]);
+
   useEffect(() => {
-    if (!project) {
-      setTasks([]);
-      return;
-    }
-    fetchTasks(project.id)
-      .then(setTasks)
-      .catch(() => setTasks([]));
+    if (!project) { setTasks([]); return; }
+    fetchTasks(project.id).then(setTasks).catch(() => setTasks([]));
   }, [project]);
 
-  const promptCreateTask = (status: string) => {
-    setCreatePromptCol(status);
-    setCreateTaskTitle("");
-  };
+  // ── task modal helpers ────────────────────────────────────────────────────
+  const promptCreateTask = (status: string) => { setCreatePromptCol(status); setCreateTaskTitle(""); };
 
   const confirmCreateTask = async () => {
     if (!createPromptCol) return;
     const title = createTaskTitle.trim();
-    if (!title) {
-      setCreatePromptCol(null);
-      return;
-    }
-    if (!project) {
-      setAlertMessage("Select a project first");
-      setCreatePromptCol(null);
-      return;
-    }
+    if (!title) { setCreatePromptCol(null); return; }
+    if (!project) { setAlertMessage("Select a project first"); setCreatePromptCol(null); return; }
     try {
       const created = await createTask(title, project.id, createPromptCol.toLowerCase());
       setTasks((prev) => [...prev, created]);
-    } catch (err: any) {
-      setAlertMessage("Failed to create task");
-    } finally {
-      setCreatePromptCol(null);
-    }
+    } catch { setAlertMessage("Failed to create task"); }
+    finally { setCreatePromptCol(null); }
   };
 
-  const onClickDeleteTask = (e: React.MouseEvent, taskId: number) => {
-    e.stopPropagation();
-    setDeleteConfirmId(taskId);
-  };
+  const onClickDeleteTask = (e: React.MouseEvent, taskId: number) => { e.stopPropagation(); setDeleteConfirmId(taskId); };
 
   const confirmDeleteTask = async () => {
     if (deleteConfirmId === null) return;
     try {
       await deleteTask(deleteConfirmId);
       setTasks((prev) => prev.filter((t) => t.id !== deleteConfirmId));
-    } catch (err: any) {
-      setAlertMessage("Failed to delete task");
-    } finally {
-      setDeleteConfirmId(null);
-    }
+    } catch { setAlertMessage("Failed to delete task"); }
+    finally { setDeleteConfirmId(null); }
   };
 
-  const promptEditTask = (e: React.MouseEvent, task: any) => {
-    e.stopPropagation();
-    setEditTaskData({ id: task.id, title: task.title });
-  };
+  const promptEditTask = (e: React.MouseEvent, task: any) => { e.stopPropagation(); setEditTaskData({ id: task.id, title: task.title }); };
 
   const confirmEditTask = async () => {
     if (!editTaskData) return;
     const title = editTaskData.title.trim();
-    if (!title) {
-      setEditTaskData(null);
-      return;
-    }
+    if (!title) { setEditTaskData(null); return; }
     try {
       const updated = await renameTask(editTaskData.id, title);
       setTasks((prev) => prev.map((t) => (t.id === editTaskData.id ? updated : t)));
-    } catch (err: any) {
-      setAlertMessage("Failed to edit task");
-    } finally {
-      setEditTaskData(null);
-    }
+    } catch { setAlertMessage("Failed to edit task"); }
+    finally { setEditTaskData(null); }
   };
 
-  const onDragStart = (task: any) => {
+  // ── drag handlers ─────────────────────────────────────────────────────────
+  const onDragStart = (e: React.DragEvent, task: any) => {
     setDraggedTask(task);
+    e.dataTransfer.effectAllowed = "move";
   };
 
   const onDragEnd = () => {
     setDraggedTask(null);
-    setDragOverColumn(null);
+    setDragOverCol(null);
+    setDragOverTaskId(null);
   };
 
-  const onDropColumn = async (status: string) => {
-    if (!draggedTask) return;
-    const updated = await moveTask(draggedTask.id, status);
-    setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+  /** Called when dragging over a specific task card — for within-column reorder */
+  const onDragOverTask = (e: React.DragEvent, hoveredTask: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedTask || hoveredTask.id === draggedTask.id) return;
+    setDragOverTaskId(hoveredTask.id);
+  };
+
+  /** Called when dragging over the column background (empty area or cross-col) */
+  const onDragOverColumn = (e: React.DragEvent, col: string) => {
+    e.preventDefault();
+    setDragOverCol(col);
+  };
+
+  const onDragLeaveColumn = () => {
+    setDragOverCol(null);
+  };
+
+  /**
+   * Drop on a task card → reorder within same column,
+   * OR move to the column if it's a different column.
+   */
+  const onDropOnTask = async (e: React.DragEvent, targetTask: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!draggedTask || draggedTask.id === targetTask.id) {
+      setDraggedTask(null);
+      setDragOverTaskId(null);
+      return;
+    }
+
+    const current = tasksRef.current;
+    const sameCol = normalizeStatus(draggedTask.status) === normalizeStatus(targetTask.status);
+
+    if (sameCol) {
+      // ── Reorder within the same column ─────────────────────────────────
+      const colTasks = current.filter((t) => normalizeStatus(t.status) === normalizeStatus(targetTask.status));
+      const fromIdx = colTasks.findIndex((t) => t.id === draggedTask.id);
+      const toIdx = colTasks.findIndex((t) => t.id === targetTask.id);
+
+      const reordered = [...colTasks];
+      reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, draggedTask);
+
+      // Optimistic update
+      const otherTasks = current.filter((t) => normalizeStatus(t.status) !== normalizeStatus(targetTask.status));
+      setTasks([...otherTasks, ...reordered]);
+
+      // Persist
+      try { await reorderTasks(reordered.map((t) => t.id)); }
+      catch { fetchTasks(project.id).then(setTasks); }
+    } else {
+      // ── Move to a different column ───────────────────────────────────────
+      try {
+        const updated = await moveTask(draggedTask.id, normalizeStatus(targetTask.status));
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      } catch { setAlertMessage("Failed to move task"); }
+    }
+
     setDraggedTask(null);
-    setDragOverColumn(null);
+    setDragOverCol(null);
+    setDragOverTaskId(null);
   };
 
+  /** Drop on the column background → move to that column (at end) */
+  const onDropColumn = async (col: string) => {
+    if (!draggedTask) return;
+    if (normalizeStatus(draggedTask.status) === col) {
+      // Same column — just clear state, no-op
+      setDraggedTask(null);
+      setDragOverCol(null);
+      setDragOverTaskId(null);
+      return;
+    }
+    try {
+      const updated = await moveTask(draggedTask.id, col);
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    } catch { setAlertMessage("Failed to move task"); }
+    finally {
+      setDraggedTask(null);
+      setDragOverCol(null);
+      setDragOverTaskId(null);
+    }
+  };
+
+  // ── helpers ───────────────────────────────────────────────────────────────
   const normalizeStatus = (s: string) => {
     if (!s) return "todo";
     s = s.toLowerCase();
@@ -408,10 +431,24 @@ export default function Dashboard({ project, backToProjects }: any) {
     return configs[status] || configs.todo;
   };
 
-  const renderTasks = (status: string) => {
-    const columnTasks = tasks.filter((t) => normalizeStatus(t.status) === status);
+  const getColumnTasks = (status: string) =>
+    tasks.filter((t) => normalizeStatus(t.status) === status);
 
-    if (columnTasks.length === 0) {
+  const columnStyle = (name: string) => ({
+    ...styles.column,
+    boxShadow: "8px 8px 16px rgba(0,0,0,0.5), -8px -8px 16px rgba(60,60,60,0.05)",
+    outline:
+      dragOverCol === name
+        ? `2px solid ${getColumnConfig(name).color}`
+        : "2px solid transparent",
+    outlineOffset: "-2px",
+  });
+
+  // ── render tasks ──────────────────────────────────────────────────────────
+  const renderTasks = (status: string) => {
+    const colTasks = getColumnTasks(status);
+
+    if (colTasks.length === 0) {
       return (
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>{getColumnConfig(status).emoji}</div>
@@ -420,62 +457,60 @@ export default function Dashboard({ project, backToProjects }: any) {
       );
     }
 
-    return columnTasks.map((t) => (
-      <div
-        key={t.id}
-        style={{
-          ...styles.card,
-          ...(draggedTask?.id === t.id ? styles.cardDragging : {}),
-        }}
-        draggable
-        onDragStart={() => onDragStart(t)}
-        onDragEnd={onDragEnd}
-      >
-        <span style={{ flex: 1, paddingRight: "8px" }}>{t.title}</span>
-        <div style={{ display: "flex", gap: "2px" }}>
-          <button
-            style={styles.taskEditBtn}
-            title="Edit task"
-            onClick={(e) => promptEditTask(e, t)}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#0b7de0"; e.currentTarget.style.background = "rgba(11, 125, 224, 0.1)"; e.currentTarget.style.borderRadius = "6px"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "#666666"; e.currentTarget.style.background = "transparent"; }}
-          >
-            ✏️
-          </button>
-          <button
-            style={styles.taskDeleteBtn}
-            title="Delete task"
-            onClick={(e) => onClickDeleteTask(e, t.id)}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#ff6b6b"; e.currentTarget.style.background = "rgba(255, 68, 68, 0.1)"; e.currentTarget.style.borderRadius = "6px"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "#666666"; e.currentTarget.style.background = "transparent"; }}
-          >
-            🗑️
-          </button>
+    return colTasks.map((t) => (
+      <div key={t.id}>
+        {/* Blue drop-line indicator shown above the hovered task */}
+        {dragOverTaskId === t.id && draggedTask?.id !== t.id && (
+          <div style={styles.dropIndicator} />
+        )}
+
+        <div
+          style={{
+            ...styles.card,
+            opacity: draggedTask?.id === t.id ? 0.4 : 1,
+            transform: draggedTask?.id === t.id ? "scale(1.03)" : "scale(1)",
+            boxShadow:
+              draggedTask?.id === t.id
+                ? "8px 8px 20px rgba(0,0,0,0.6)"
+                : "6px 6px 12px rgba(0,0,0,0.4), -6px -6px 12px rgba(60,60,60,0.05)",
+            cursor: "grab",
+          }}
+          draggable
+          onDragStart={(e) => onDragStart(e, t)}
+          onDragEnd={onDragEnd}
+          onDragOver={(e) => onDragOverTask(e, t)}
+          onDrop={(e) => onDropOnTask(e, t)}
+        >
+          <span style={{ flex: 1, paddingRight: "8px" }}>{t.title}</span>
+          <div style={{ display: "flex", gap: "2px" }}>
+            <button
+              style={styles.taskEditBtn}
+              title="Edit task"
+              onClick={(e) => promptEditTask(e, t)}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "#0b7de0"; e.currentTarget.style.background = "rgba(11,125,224,0.1)"; e.currentTarget.style.borderRadius = "6px"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "#666666"; e.currentTarget.style.background = "transparent"; }}
+            >✏️</button>
+            <button
+              style={styles.taskDeleteBtn}
+              title="Delete task"
+              onClick={(e) => onClickDeleteTask(e, t.id)}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "#ff6b6b"; e.currentTarget.style.background = "rgba(255,68,68,0.1)"; e.currentTarget.style.borderRadius = "6px"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "#666666"; e.currentTarget.style.background = "transparent"; }}
+            >🗑️</button>
+          </div>
         </div>
       </div>
     ));
   };
 
-  const columnStyle = (name: string) => ({
-    ...styles.column,
-    boxShadow:
-      dragOverColumn === name
-        ? `inset 0 0 0 2px ${getColumnConfig(name).color}, 8px 8px 16px rgba(0, 0, 0, 0.5), -8px -8px 16px rgba(60, 60, 60, 0.05)`
-        : "8px 8px 16px rgba(0, 0, 0, 0.5), -8px -8px 16px rgba(60, 60, 60, 0.05)",
-    transform: dragOverColumn === name ? "scale(1.01)" : "scale(1)",
-  });
-
-  const getTaskCount = (status: string) =>
-    tasks.filter((t) => normalizeStatus(t.status) === status).length;
-
+  // ── JSX ───────────────────────────────────────────────────────────────────
   return (
     <div style={styles.container}>
-      {/* hide native scrollbars but keep scrollable */}
       <style>{`
-        /* Chrome, Safari, Edge */
         *::-webkit-scrollbar { display: none; }
-        /* Firefox */
         * { scrollbar-width: none; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        input::placeholder { color: #666666; }
       `}</style>
 
       {/* Delete Confirmation Modal */}
@@ -485,18 +520,12 @@ export default function Dashboard({ project, backToProjects }: any) {
             <h3 style={styles.modalTitle}>Delete Task</h3>
             <p style={styles.modalText}>Are you sure you want to delete this task? This action cannot be undone.</p>
             <div style={styles.modalButtons}>
-              <button
-                style={styles.btnSecondary}
-                onClick={() => setDeleteConfirmId(null)}
+              <button style={styles.btnSecondary} onClick={() => setDeleteConfirmId(null)}
                 onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; }}
-              >Cancel</button>
-              <button
-                style={styles.btnDanger}
-                onClick={confirmDeleteTask}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; }}>Cancel</button>
+              <button style={styles.btnDanger} onClick={confirmDeleteTask}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "#ff6b6b"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#ff4444"; e.currentTarget.style.transform = "translateY(0)"; }}
-              >Delete</button>
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#ff4444"; e.currentTarget.style.transform = "translateY(0)"; }}>Delete</button>
             </div>
           </div>
         </div>
@@ -507,27 +536,17 @@ export default function Dashboard({ project, backToProjects }: any) {
         <div style={styles.modalOverlay} onClick={() => setEditTaskData(null)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>Edit Task</h3>
-            <input
-              style={styles.modalInput}
-              autoFocus
-              placeholder="What needs to be done?"
+            <input style={styles.modalInput} autoFocus placeholder="What needs to be done?"
               value={editTaskData.title}
               onChange={(e) => setEditTaskData({ ...editTaskData, title: e.target.value })}
-              onKeyDown={(e) => { if (e.key === "Enter") confirmEditTask(); if (e.key === "Escape") setEditTaskData(null); }}
-            />
+              onKeyDown={(e) => { if (e.key === "Enter") confirmEditTask(); if (e.key === "Escape") setEditTaskData(null); }} />
             <div style={styles.modalButtons}>
-              <button
-                style={styles.btnSecondary}
-                onClick={() => setEditTaskData(null)}
+              <button style={styles.btnSecondary} onClick={() => setEditTaskData(null)}
                 onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; }}
-              >Cancel</button>
-              <button
-                style={styles.btnPrimary}
-                onClick={confirmEditTask}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; }}>Cancel</button>
+              <button style={styles.btnPrimary} onClick={confirmEditTask}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "#1a8cf0"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#0b7de0"; e.currentTarget.style.transform = "translateY(0)"; }}
-              >Save</button>
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#0b7de0"; e.currentTarget.style.transform = "translateY(0)"; }}>Save</button>
             </div>
           </div>
         </div>
@@ -538,27 +557,17 @@ export default function Dashboard({ project, backToProjects }: any) {
         <div style={styles.modalOverlay} onClick={() => setCreatePromptCol(null)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.modalTitle}>New Task ({createPromptCol})</h3>
-            <input
-              style={styles.modalInput}
-              autoFocus
-              placeholder="What needs to be done?"
+            <input style={styles.modalInput} autoFocus placeholder="What needs to be done?"
               value={createTaskTitle}
               onChange={(e) => setCreateTaskTitle(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") confirmCreateTask(); if (e.key === "Escape") setCreatePromptCol(null); }}
-            />
+              onKeyDown={(e) => { if (e.key === "Enter") confirmCreateTask(); if (e.key === "Escape") setCreatePromptCol(null); }} />
             <div style={styles.modalButtons}>
-              <button
-                style={styles.btnSecondary}
-                onClick={() => setCreatePromptCol(null)}
+              <button style={styles.btnSecondary} onClick={() => setCreatePromptCol(null)}
                 onMouseEnter={(e) => { e.currentTarget.style.color = "#fff"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; }}
-              >Cancel</button>
-              <button
-                style={styles.btnPrimary}
-                onClick={confirmCreateTask}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; }}>Cancel</button>
+              <button style={styles.btnPrimary} onClick={confirmCreateTask}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "#1a8cf0"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#0b7de0"; e.currentTarget.style.transform = "translateY(0)"; }}
-              >Create</button>
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#0b7de0"; e.currentTarget.style.transform = "translateY(0)"; }}>Create</button>
             </div>
           </div>
         </div>
@@ -571,23 +580,19 @@ export default function Dashboard({ project, backToProjects }: any) {
             <h3 style={styles.modalTitle}>Notice</h3>
             <p style={styles.modalText}>{alertMessage}</p>
             <div style={styles.modalButtons}>
-              <button
-                style={styles.btnPrimary}
-                onClick={() => setAlertMessage(null)}
+              <button style={styles.btnPrimary} onClick={() => setAlertMessage(null)}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "#1a8cf0"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "#0b7de0"; }}
-              >OK</button>
+                onMouseLeave={(e) => { e.currentTarget.style.background = "#0b7de0"; }}>OK</button>
             </div>
           </div>
         </div>
       )}
 
-      <button
-        style={styles.backBtn}
-        onClick={backToProjects}
+      <button style={styles.backBtn} onClick={backToProjects}
         onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; e.currentTarget.style.background = "#2c2c2c"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; e.currentTarget.style.background = "#242424"; }}
-      >← Back to Projects</button>
+        onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; e.currentTarget.style.background = "#242424"; }}>
+        ← Back to Projects
+      </button>
 
       <div>
         <div style={styles.header}>{project ? project.title : "Project Board"}</div>
@@ -595,33 +600,28 @@ export default function Dashboard({ project, backToProjects }: any) {
       </div>
 
       <div style={styles.board}>
-        {["todo", "doing", "done"].map((col) => (
+        {(["todo", "doing", "done"] as const).map((col) => (
           <div
             key={col}
             style={columnStyle(col)}
-            onDragOver={(e) => e.preventDefault()}
-            onDragEnter={() => setDragOverColumn(col)}
-            onDragLeave={() => setDragOverColumn(null)}
+            onDragOver={(e) => onDragOverColumn(e, col)}
+            onDragLeave={onDragLeaveColumn}
             onDrop={() => onDropColumn(col)}
           >
             <div style={styles.columnHeader}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "18px" }}>
-                  {getColumnConfig(col).emoji}
-                </span>
+                <span style={{ fontSize: "18px" }}>{getColumnConfig(col).emoji}</span>
                 <div style={styles.columnTitle}>{col}</div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={styles.columnCount}>{getTaskCount(col)}</div>
+                <div style={styles.columnCount}>{getColumnTasks(col).length}</div>
                 <button
                   style={styles.addBtn}
                   title={`Add to ${col.toUpperCase()}`}
                   onClick={() => promptCreateTask(col.toUpperCase())}
                   onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; e.currentTarget.style.background = "#3a3a3a"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.color = "#b3b3b3"; e.currentTarget.style.background = "transparent"; }}
-                >
-                  +
-                </button>
+                >+</button>
               </div>
             </div>
             <div style={styles.taskList}>
@@ -630,25 +630,6 @@ export default function Dashboard({ project, backToProjects }: any) {
           </div>
         ))}
       </div>
-
-      <style>
-        {`
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-
-          input::placeholder {
-            color: #666666;
-          }
-        `}
-      </style>
     </div>
   );
 }

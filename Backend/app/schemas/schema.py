@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import List
 
 # -------- PROJECT --------
 class ProjectCreate(BaseModel):
@@ -9,6 +10,9 @@ class TaskCreate(BaseModel):
     title: str
     status: str = "todo"
     project_id: int
+
+class TaskReorder(BaseModel):
+    task_ids: List[int]
 
 # -------- USER --------
 class UserCreate(BaseModel):
