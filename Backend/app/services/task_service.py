@@ -6,8 +6,8 @@ from app.models.project import Project
 class TaskService:
 
     @staticmethod
-    def create_task(db: Session, title: str, project_id: int, status: str):
-        task = Task(title=title, project_id=project_id, status=status)
+    def create_task(db: Session, title: str, project_id: int, status: str, position: float = 0.0):
+        task = Task(title=title, project_id=project_id, status=status, position=position)
         db.add(task)
         db.commit()
         db.refresh(task)

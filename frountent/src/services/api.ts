@@ -119,6 +119,15 @@ export async function deleteTask(taskId: number) {
   return handleResponse(res);
 }
 
+export async function reorderTasks(taskIds: number[]) {
+  const res = await fetch(`${API_URL}/tasks/reorder`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ task_ids: taskIds }),
+  });
+  return handleResponse(res);
+}
+
 export async function renameTask(taskId: number, title: string) {
   const res = await fetch(`${API_URL}/tasks/${taskId}?title=${encodeURIComponent(title)}`, {
     method: "PATCH",

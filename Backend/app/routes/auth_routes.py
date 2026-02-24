@@ -121,6 +121,7 @@ def google_auth(payload: dict, db: Session = Depends(get_db)):
         tokens["id_token"],
         grequests.Request(),
         GOOGLE_CLIENT_ID,
+        clock_skew_in_seconds=10,
     )
 
     email = idinfo["email"]
