@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: project-management-backend
+    runtime: python
+    rootDir: backend
+
+    buildCommand: "pip install -r requirements.txt"
+
+    startCommand: >
+      gunicorn app.main:app
+      -k uvicorn.workers.UvicornWorker
+
+    disk:
+      name: sqlite-disk
+      mountPath: /var/data
+      sizeGB: 1
+
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:////var/data/database.db
