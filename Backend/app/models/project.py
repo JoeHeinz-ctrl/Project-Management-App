@@ -9,8 +9,8 @@ class Project(Base):
     title = Column(String, nullable=False)
 
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
 
     tasks = relationship("Task", back_populates="project", cascade="all, delete")
-
     owner = relationship("User", back_populates="projects")
-
+    team = relationship("Team", back_populates="projects")
