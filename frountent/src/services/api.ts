@@ -11,12 +11,12 @@ function getAuthHeaders() {
 
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,   // ✅ REQUIRED
+    Authorization: `Bearer ${token}`,
   };
 }
 
 async function handleResponse(res: Response) {
-  const data = await res.json();        // ✅ read once
+  const data = await res.json();
 
   if (!res.ok) {
     throw new Error(data.detail || "Request failed");
@@ -38,7 +38,7 @@ export async function registerUser(name: string, email: string, password: string
 }
 
 export async function googleLogin(code: string) {
-  const res = await fetch(`${API_URL}/auth/google`, {   // ✅ FIXED
+  const res = await fetch(`${API_URL}/auth/google`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -57,8 +57,6 @@ export async function googleLogin(code: string) {
   return data;
 }
 
-
-
 export async function loginUser(email: string, password: string) {
   const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
@@ -68,7 +66,6 @@ export async function loginUser(email: string, password: string) {
 
   const data = await handleResponse(res);
 
-  // ✅ CRITICAL — STORE TOKEN
   localStorage.setItem("token", data.access_token);
 
   return data;
@@ -83,7 +80,6 @@ export async function fetchTasks(projectId: number) {
 
   const data = await handleResponse(res);
 
-  // client-side filter (safe even if backend already filters)
   return data.filter((t: any) => t.project_id === projectId);
 }
 
@@ -93,7 +89,7 @@ export async function createTask(title: string, projectId: number, status: strin
     headers: getAuthHeaders(),
     body: JSON.stringify({
       title,
-      status, // ✅ dynamic
+      status,
       project_id: projectId,
     }),
   });
@@ -104,7 +100,7 @@ export async function createTask(title: string, projectId: number, status: strin
 export async function moveTask(taskId: number, status: string) {
   const res = await fetch(`${API_URL}/tasks/${taskId}/move?status=${status}`, {
     method: "PUT",
-    headers: getAuthHeaders(),          // ✅ AUTH ADDED
+    headers: getAuthHeaders(),
   });
 
   return handleResponse(res);
@@ -137,48 +133,28 @@ export async function renameTask(taskId: number, title: string) {
   return handleResponse(res);
 }
 
-export async function createProject(title: string) {
-  const token = localStorage.getItem("token");
+/* ---------------- PROJECTS ---------------- */
 
-  const res = await fetch("http://127.0.0.1:8000/projects/", {
+export async function createProject(title: string, teamId?: number) {
+  const res = await fetch(`${API_URL}/projects/`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,   // ⭐ REQUIRED
-    },
-    body: JSON.stringify({ title }),
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ title, team_id: teamId ?? null }),
   });
 
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.detail || "Failed to create project");
-  }
-
-  return data;
+  return handleResponse(res);
 }
 
-
 export async function fetchProjects() {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch("http://127.0.0.1:8000/projects/", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+  const res = await fetch(`${API_URL}/projects/`, {
+    headers: getAuthHeaders(),
   });
 
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.detail || "Failed to fetch projects");
-  }
-
-  return data;
+  return handleResponse(res);
 }
 
 export async function renameProject(projectId: number, title: string) {
-  const res = await fetch(`http://127.0.0.1:8000/projects/${projectId}`, {
+  const res = await fetch(`${API_URL}/projects/${projectId}`, {
     method: "PATCH",
     headers: getAuthHeaders(),
     body: JSON.stringify({ title }),
@@ -187,11 +163,43 @@ export async function renameProject(projectId: number, title: string) {
 }
 
 export async function deleteProject(projectId: number) {
-  const res = await fetch(`http://127.0.0.1:8000/projects/${projectId}`, {
+  const res = await fetch(`${API_URL}/projects/${projectId}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
   return handleResponse(res);
 }
 
+/* ---------------- TEAMS ---------------- */
 
+export async function createTeam(name: string) {
+  const res = await fetch(`${API_URL}/teams/`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  return handleResponse(res);
+}
+
+export async function joinTeam(teamCode: string) {
+  const res = await fetch(`${API_URL}/teams/join`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ team_code: teamCode }),
+  });
+  return handleResponse(res);
+}
+
+export async function fetchTeams() {
+  const res = await fetch(`${API_URL}/teams/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function fetchTeamProjects(teamId: number) {
+  const res = await fetch(`${API_URL}/teams/${teamId}/projects`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
