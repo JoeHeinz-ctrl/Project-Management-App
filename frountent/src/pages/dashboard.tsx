@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchTasks, createTask, moveTask, deleteTask, renameTask, reorderTasks } from "../services/api";
+import { fetchTasks, createTask, moveTask, deleteTask, renameTask, reorderTasks, getCurrentUser } from "../services/api";
 
 
 const styles: any = {
@@ -252,6 +252,8 @@ const styles: any = {
 export default function Dashboard({ project, backToProjects }: any) {
 
   const [tasks, setTasks] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [greeting, setGreeting] = useState<string | null>(null);
 
   // ── drag state ────────────────────────────────────────────────────────────
   // draggedTask    – the task being dragged
@@ -276,6 +278,40 @@ export default function Dashboard({ project, backToProjects }: any) {
     if (!project) { setTasks([]); return; }
     fetchTasks(project.id).then(setTasks).catch(() => setTasks([]));
   }, [project]);
+
+  // Fetch current user and compute greeting
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!mounted) return;
+        setCurrentUser(user);
+
+        const hour = new Date().getHours();
+        let bucket = "morning";
+        if (hour >= 12 && hour < 17) bucket = "afternoon";
+        else if (hour >= 17 && hour < 22) bucket = "evening";
+        else if (hour >= 22 || hour < 5) bucket = "night";
+
+        const variants: Record<string, string[]> = {
+          morning: ["Good morning", "Welcome back", "Great to see you this morning"],
+          afternoon: ["Good afternoon", "Welcome back", "Hope your day's going well"],
+          evening: ["Good evening", "Welcome back", "Nice to see you this evening"],
+          night: ["Working late?", "Welcome back", "Good to see you"]
+        };
+
+        const rawVariant = Number(localStorage.getItem("greeting_variant") ?? Math.floor(Math.random() * 100));
+        const list = variants[bucket] || variants.morning;
+        const pick = list[rawVariant % list.length];
+        const firstName = (user?.name || "").split(" ")[0] || "there";
+        setGreeting(`${pick} ${firstName}`);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // ── task modal helpers ────────────────────────────────────────────────────
   const promptCreateTask = (status: string) => { setCreatePromptCol(status); setCreateTaskTitle(""); };
@@ -595,6 +631,7 @@ export default function Dashboard({ project, backToProjects }: any) {
       </button>
 
       <div>
+        {greeting && <div style={{ ...styles.subheader, fontSize: 16, marginBottom: 8 }}>{greeting}</div>}
         <div style={styles.header}>{project ? project.title : "Project Board"}</div>
         <div style={styles.subheader}>{tasks.length} total tasks</div>
       </div>

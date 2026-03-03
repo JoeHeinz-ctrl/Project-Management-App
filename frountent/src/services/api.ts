@@ -53,6 +53,12 @@ export async function googleLogin(code: string) {
   }
 
   localStorage.setItem("token", data.access_token);
+  try {
+    const variants = [0,1,2,3,4];
+    const pick = variants[Math.floor(Math.random() * variants.length)];
+    localStorage.setItem("greeting_variant", String(pick));
+    localStorage.setItem("greeting_ts", String(Date.now()));
+  } catch {}
 
   return data;
 }
@@ -67,8 +73,23 @@ export async function loginUser(email: string, password: string) {
   const data = await handleResponse(res);
 
   localStorage.setItem("token", data.access_token);
+  try {
+    const variants = [0,1,2,3,4];
+    const pick = variants[Math.floor(Math.random() * variants.length)];
+    localStorage.setItem("greeting_variant", String(pick));
+    localStorage.setItem("greeting_ts", String(Date.now()));
+  } catch {}
 
   return data;
+}
+
+/* ---------------- USER ---------------- */
+
+export async function getCurrentUser() {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
 }
 
 /* ---------------- TASKS ---------------- */

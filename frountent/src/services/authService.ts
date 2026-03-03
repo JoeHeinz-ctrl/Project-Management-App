@@ -32,6 +32,14 @@ export async function loginUser(email: string, password: string) {
   // ✅ CRITICAL LINE — STORE TOKEN
   localStorage.setItem("token", data.access_token);
 
+  // Pick a per-login greeting variant so each login can feel fresh
+  try {
+    const variants = [0, 1, 2, 3, 4];
+    const pick = variants[Math.floor(Math.random() * variants.length)];
+    localStorage.setItem("greeting_variant", String(pick));
+    localStorage.setItem("greeting_ts", String(Date.now()));
+  } catch {}
+
   return data;
 }
 

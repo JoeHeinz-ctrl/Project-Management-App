@@ -8,6 +8,7 @@ import {
   fetchTeamProjects,
   createTeam,
   joinTeam,
+  getCurrentUser,
 } from "../services/api";
 
 /* ─────────────────────────── styles ─────────────────────────── */
@@ -216,6 +217,8 @@ export default function ProjectBoard({ onSelect }: any) {
   const [personalProjects, setPersonalProjects] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [teamProjects, setTeamProjects] = useState<Record<number, any[]>>({});
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [greeting, setGreeting] = useState<string | null>(null);
 
   // hover / rename state per card
   const [hoveredId, setHoveredId] = useState<number | null>(null);
@@ -268,6 +271,37 @@ export default function ProjectBoard({ onSelect }: any) {
   }
 
   useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!mounted) return;
+        setCurrentUser(user);
+        const hour = new Date().getHours();
+        let bucket = "morning";
+        if (hour >= 12 && hour < 17) bucket = "afternoon";
+        else if (hour >= 17 && hour < 22) bucket = "evening";
+        else if (hour >= 22 || hour < 5) bucket = "night";
+
+        const variants: Record<string, string[]> = {
+          morning: ["Good morning", "Welcome back", "Great to see you this morning"],
+          afternoon: ["Good afternoon", "Welcome back", "Hope your day's going well"],
+          evening: ["Good evening", "Welcome back", "Nice to see you this evening"],
+          night: ["Working late?", "Welcome back", "Good to see you"]
+        };
+
+        const rawVariant = Number(localStorage.getItem("greeting_variant") ?? Math.floor(Math.random() * 100));
+        const list = variants[bucket] || variants.morning;
+        const pick = list[rawVariant % list.length];
+        const firstName = (user?.name || "").split(" ")[0] || "there";
+        setGreeting(`${pick} ${firstName}`);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
   useEffect(() => { if (editingId !== null) editInputRef.current?.focus(); }, [editingId]);
 
   /* ── helpers ────────────────────────────────────────────────── */
@@ -447,7 +481,10 @@ export default function ProjectBoard({ onSelect }: any) {
 
       {/* ── Top bar ── */}
       <div style={s.topBar}>
-        <h2 style={s.pageTitle}>🗂️ Projects</h2>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {greeting && <div style={{ color: "#b3b3b3", fontSize: 14, marginBottom: 6 }}>{greeting}</div>}
+          <h2 style={s.pageTitle}>🗂️ Projects</h2>
+        </div>
         <div style={s.topActions}>
           <button
             style={s.btnOutline}
