@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import NeuralBackground from "@/components/ui/flow-field-background";
 
 interface LandingProps {
     onGetStarted: () => void;
@@ -48,11 +49,9 @@ export default function Landing({ onGetStarted }: LandingProps) {
 
             {/* Hero */}
             <section style={s.hero}>
-                {/* Full-bleed background image with natural aspect ratio */}
-                <div style={s.heroBg}>
-                    <img src="/hero.png" alt="" style={s.heroImg} />
-                    <div style={s.heroFadeTop} />
-                    <div style={s.heroFadeBottom} />
+                {/* Animated neural background replaces static hero image */}
+                <div className="absolute inset-0">
+                  <NeuralBackground color="#818cf8" trailOpacity={0.1} speed={0.8} particleCount={600} />
                 </div>
 
                 {/* Hero content — centred over the lower portion */}
