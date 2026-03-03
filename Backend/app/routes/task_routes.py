@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
+from sqlalchemy import or_
 from typing import List
 
 from app.db.session import get_db
@@ -10,8 +11,29 @@ from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.models.task import Task
 from app.models.project import Project
+from app.models.team import TeamMember
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
+
+
+# Helper function to check user access to a project (owner or team member)
+def user_has_project_access(db: Session, project_id: int, user_id: int) -> bool:
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        return False
+    
+    # Check if user is the owner
+    if project.owner_id == user_id:
+        return True
+    
+    # Check if user is a team member (if project belongs to a team)
+    if project.team_id:
+        return db.query(TeamMember).filter(
+            TeamMember.team_id == project.team_id,
+            TeamMember.user_id == user_id
+        ).first() is not None
+    
+    return False
 
 
 # CREATE TASK (User Protected)
@@ -21,13 +43,8 @@ def create_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    project = (
-        db.query(Project)
-        .filter(Project.id == task.project_id, Project.owner_id == current_user.id)
-        .first()
-    )
-
-    if not project:
+    # Check if user has access to the project (owner or team member)
+    if not user_has_project_access(db, task.project_id, current_user.id):
         raise HTTPException(status_code=404, detail="Project not found or not authorized")
 
     # Assign position at the end of the column
@@ -54,10 +71,17 @@ def get_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Get tasks from projects the user owns OR is a team member of
     return (
         db.query(Task)
         .join(Project, Task.project_id == Project.id)
-        .filter(Project.owner_id == current_user.id)
+        .outerjoin(TeamMember, (Project.team_id == TeamMember.team_id) & (TeamMember.user_id == current_user.id))
+        .filter(
+            or_(
+                Project.owner_id == current_user.id,
+                TeamMember.user_id == current_user.id
+            )
+        )
         .order_by(Task.position.asc())
         .all()
     )
@@ -71,13 +95,8 @@ def reorder_tasks(
     current_user: User = Depends(get_current_user)
 ):
     for index, task_id in enumerate(payload.task_ids):
-        task = (
-            db.query(Task)
-            .join(Project, Task.project_id == Project.id)
-            .filter(Task.id == task_id, Project.owner_id == current_user.id)
-            .first()
-        )
-        if task:
+        task = db.query(Task).filter(Task.id == task_id).first()
+        if task and user_has_project_access(db, task.project_id, current_user.id):
             task.position = float(index)
 
     db.commit()
@@ -92,14 +111,13 @@ def move_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    task = (
-        db.query(Task)
-        .join(Project, Task.project_id == Project.id)
-        .filter(Task.id == task_id, Project.owner_id == current_user.id)
-        .first()
-    )
-
+    task = db.query(Task).filter(Task.id == task_id).first()
+    
     if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Check if user has access to this task's project
+    if not user_has_project_access(db, task.project_id, current_user.id):
         raise HTTPException(status_code=404, detail="Task not found or not authorized")
 
     # Place at the end of the new column
@@ -124,14 +142,13 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    task = (
-        db.query(Task)
-        .join(Project, Task.project_id == Project.id)
-        .filter(Task.id == task_id, Project.owner_id == current_user.id)
-        .first()
-    )
-
+    task = db.query(Task).filter(Task.id == task_id).first()
+    
     if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Check if user has access to this task's project
+    if not user_has_project_access(db, task.project_id, current_user.id):
         raise HTTPException(status_code=404, detail="Task not found or not authorized")
 
     db.delete(task)
@@ -148,14 +165,13 @@ def rename_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    task = (
-        db.query(Task)
-        .join(Project, Task.project_id == Project.id)
-        .filter(Task.id == task_id, Project.owner_id == current_user.id)
-        .first()
-    )
-
+    task = db.query(Task).filter(Task.id == task_id).first()
+    
     if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    # Check if user has access to this task's project
+    if not user_has_project_access(db, task.project_id, current_user.id):
         raise HTTPException(status_code=404, detail="Task not found or not authorized")
 
     task.title = title
