@@ -5,8 +5,9 @@ import Login from "./pages/login";
 import Register from "./pages/register";
 import ProjectBoard from "./pages/projectboard";
 import Dashboard from "./pages/dashboard";
+import { PricingDemo } from "./components/ui/pricing-demo";
 
-type Screen = "landing" | "login" | "register" | "board";
+type Screen = "landing" | "login" | "register" | "board" | "pricing";
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("landing");
@@ -36,11 +37,16 @@ export default function App() {
 
   // ── not logged in ───────────────────────────────────────────────────────
   if (screen === "landing") {
-    return <Landing onGetStarted={() => setScreen("login")} />;
+    return <Landing onGetStarted={() => setScreen("login")} onShowPricing={() => setScreen("pricing")} />;
   }
 
   if (screen === "register") {
     return <Register onBack={() => setScreen("login")} />;
+  }
+
+  // pricing demo screen
+  if (screen === "pricing") {
+    return <PricingDemo />;
   }
 
   // login screen

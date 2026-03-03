@@ -1,17 +1,19 @@
-import React from "react";
 import NeuralBackground from "@/components/ui/flow-field-background";
-import { ArrowRight, Sparkles } from "lucide-react";
 
 export default function NeuralHeroDemo() {
   return (
-    // Container must have a defined height, or use h-screen
-    <div className="relative w-full h-screen">
-      <NeuralBackground 
-            color="#818cf8" // Indigo-400
-            scale={1}
-            trailOpacity={0.1} // Lower = longer trails
-            speed={0.8}
-        />
-    </div>
+    <>
+      {/* fullScreen prop makes canvas fixed behind everything */}
+      <NeuralBackground
+        fullScreen
+        color="#818cf8" // Indigo-400
+        trailOpacity={0.1} // Lower = longer trails
+        speed={0.8}
+      />
+      {/* example content on top */}
+      <div className="relative z-10">
+        {/* your hero text/etc goes here */}
+      </div>
+    </>
   );
 }

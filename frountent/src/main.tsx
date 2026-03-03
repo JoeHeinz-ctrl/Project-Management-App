@@ -4,6 +4,8 @@ import App from "./App";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import "./index.css";
 import "./App.css";
+// tailwind layers
+import "./style/tailwind.css";
 
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

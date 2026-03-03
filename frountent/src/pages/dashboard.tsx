@@ -252,7 +252,7 @@ const styles: any = {
 export default function Dashboard({ project, backToProjects }: any) {
 
   const [tasks, setTasks] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const [, setCurrentUser] = useState<any | null>(null);
   const [greeting, setGreeting] = useState<string | null>(null);
 
   // ── drag state ────────────────────────────────────────────────────────────

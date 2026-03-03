@@ -1,8 +1,14 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface NeuralBackgroundProps {
   className?: string;
+  /**
+   * If true the canvas will take up the entire viewport and sit fixed
+   * behind other content.  This is convenient when you want the animation
+   * to be a full‑screen background without needing an outer container.
+   */
+  fullScreen?: boolean;
   /**
    * Color of the particles. 
    * Defaults to a cyan/indigo mix if not specified.
@@ -26,6 +32,7 @@ interface NeuralBackgroundProps {
 
 export default function NeuralBackground({
   className,
+  fullScreen = false,
   color = "#6366f1", // Default Indigo
   trailOpacity = 0.15,
   particleCount = 600,
@@ -47,7 +54,8 @@ export default function NeuralBackground({
     let height = container.clientHeight;
     let particles: Particle[] = [];
     let animationFrameId: number;
-    let mouse = { x: -1000, y: -1000 }; // Start off-screen
+    // mouse now also tracks velocity so the field can "carry" particles
+    let mouse = { x: -1000, y: -1000, vx: 0, vy: 0 }; // Start off-screen
 
     // --- PARTICLE CLASS ---
     class Particle {
@@ -77,7 +85,7 @@ export default function NeuralBackground({
         this.vx += Math.cos(angle) * 0.2 * speed;
         this.vy += Math.sin(angle) * 0.2 * speed;
 
-        // 3. Mouse Repulsion/Attraction
+        // 3. Mouse interaction (repel + follow movement)
         const dx = mouse.x - this.x;
         const dy = mouse.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -85,9 +93,12 @@ export default function NeuralBackground({
 
         if (distance < interactionRadius) {
           const force = (interactionRadius - distance) / interactionRadius;
-          // Push away
+          // existing repulsion
           this.vx -= dx * force * 0.05;
           this.vy -= dy * force * 0.05;
+          // add a bit of the cursor's velocity so particles are "dragged"
+          this.vx += mouse.vx * 0.0005;
+          this.vy += mouse.vy * 0.0005;
         }
 
         // 4. Apply Velocity & Friction
@@ -119,23 +130,32 @@ export default function NeuralBackground({
       }
 
       draw(context: CanvasRenderingContext2D) {
+        // Draw with local alpha without affecting global state
+        context.save();
         context.fillStyle = color;
-        // Fade in and out based on age
         const alpha = 1 - Math.abs((this.age / this.life) - 0.5) * 2;
         context.globalAlpha = alpha;
-        context.fillRect(this.x, this.y, 1.5, 1.5); // Tiny dots are faster than arcs
+        context.fillRect(this.x, this.y, 1.6, 1.6);
+        context.restore();
       }
     }
 
     // --- INITIALIZATION ---
     const init = () => {
+      // Defensive width/height: if container is unexpectedly small, fall back to window
+      width = container.clientWidth || window.innerWidth;
+      height = container.clientHeight || window.innerHeight;
+
       // Handle High-DPI screens (Retina)
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
+      const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+      // set the internal pixel size
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      // ensure CSS size matches layout size
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
+      // Reset transform then set to device pixel ratio to avoid cumulative scaling
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       particles = [];
       for (let i = 0; i < particleCount; i++) {
@@ -145,12 +165,27 @@ export default function NeuralBackground({
 
     // --- ANIMATION LOOP ---
     const animate = () => {
-      // "Fade" effect: Instead of clearing the canvas, we draw a semi-transparent rect
-      // This creates the "Trails" look.
-      // We use the background color of the parent or a dark overlay.
-      // Assuming dark mode for this effect usually:
-      ctx.fillStyle = `rgba(0, 0, 0, ${trailOpacity})`; 
+      // Trail overlay uses the container's background color so the effect blends
+      // nicely with light or dark themes.
+      let overlay = `rgba(0,0,0,${trailOpacity})`;
+      try {
+        let bg = window.getComputedStyle(container).backgroundColor || "rgba(250,250,248,1)";
+        // if transparent, fall back to body background
+        if (/rgba\([\d\s,]+,\s*0\s*\)/.test(bg) || bg === "transparent") {
+          bg = window.getComputedStyle(document.body).backgroundColor || "rgb(250,250,248)";
+        }
+        const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+        if (m) {
+          overlay = `rgba(${m[1]}, ${m[2]}, ${m[3]}, ${trailOpacity})`;
+        }
+      } catch {
+        // fallback left as default
+      }
+
+      ctx.save();
+      ctx.fillStyle = overlay;
       ctx.fillRect(0, 0, width, height);
+      ctx.restore();
 
       particles.forEach((p) => {
         p.update();
@@ -162,20 +197,27 @@ export default function NeuralBackground({
 
     // --- EVENT LISTENERS ---
     const handleResize = () => {
-      width = container.clientWidth;
-      height = container.clientHeight;
+      width = container.clientWidth || window.innerWidth;
+      height = container.clientHeight || window.innerHeight;
       init();
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
-      mouse.x = e.clientX - rect.left;
-      mouse.y = e.clientY - rect.top;
+      const newX = e.clientX - rect.left;
+      const newY = e.clientY - rect.top;
+      // compute velocity (simple difference, could be smoothed)
+      mouse.vx = newX - mouse.x;
+      mouse.vy = newY - mouse.y;
+      mouse.x = newX;
+      mouse.y = newY;
     };
 
     const handleMouseLeave = () => {
         mouse.x = -1000;
         mouse.y = -1000;
+        mouse.vx = 0;
+        mouse.vy = 0;
     }
 
     // Start
@@ -195,7 +237,14 @@ export default function NeuralBackground({
   }, [color, trailOpacity, particleCount, speed]);
 
   return (
-    <div ref={containerRef} className={cn("relative w-full h-full bg-black overflow-hidden", className)}>
+    <div
+      ref={containerRef}
+      className={cn(
+        "relative w-full h-full overflow-hidden",
+        className,
+        fullScreen && "fixed inset-0 w-screen h-screen -z-10"
+      )}
+    >
       <canvas ref={canvasRef} className="block w-full h-full" />
     </div>
   );

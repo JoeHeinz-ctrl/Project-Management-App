@@ -3,6 +3,7 @@ import NeuralBackground from "@/components/ui/flow-field-background";
 
 interface LandingProps {
     onGetStarted: () => void;
+    onShowPricing?: () => void;
 }
 
 const features = [
@@ -17,7 +18,8 @@ const features = [
 const navLinks = ["Features", "About", "Pricing", "Blog"];
 const footerLinks = ["Features", "Pricing", "About", "Blog", "Privacy", "Terms"];
 
-export default function Landing({ onGetStarted }: LandingProps) {
+
+export default function Landing({ onGetStarted, onShowPricing }: LandingProps) {
     const [scrolled, setScrolled] = useState(false);
 
     useEffect(() => {
@@ -38,7 +40,7 @@ export default function Landing({ onGetStarted }: LandingProps) {
                 </div>
                 <nav className="nav-links">
                     {navLinks.map((l) => (
-                        <button key={l} className="nav-link">{l}</button>
+                        <button key={l} className="nav-link" onClick={() => { if (l === 'Pricing') { onShowPricing?.(); } }}>{l}</button>
                     ))}
                 </nav>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -47,11 +49,14 @@ export default function Landing({ onGetStarted }: LandingProps) {
                 </div>
             </header>
 
-            {/* Hero */}
-            <section style={s.hero}>
-                {/* Animated neural background replaces static hero image */}
-                <div className="absolute inset-0">
-                  <NeuralBackground color="#818cf8" trailOpacity={0.1} speed={0.8} particleCount={600} />
+                        {/* (previous manual wrapper removed; using the component’s fullScreen prop instead) */}
+
+                        {/* Hero */}
+                        <section style={s.hero}>
+
+                {/* Background animation confined to hero area */}
+                <div style={s.heroBg}>
+                    <NeuralBackground color="#818cf8" trailOpacity={0.08} speed={0.85} particleCount={800} />
                 </div>
 
                 {/* Hero content — centred over the lower portion */}
@@ -149,24 +154,33 @@ const css = `
     display: flex; align-items: center; justify-content: space-between;
     padding: 14px 48px;
     transition: background 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease;
+    background: rgba(0,0,0,0.2); /* dark translucent over hero */
   }
   .navbar--scrolled {
-    background: rgba(255,255,255,0.88);
-    backdrop-filter: blur(16px);
-    box-shadow: 0 1px 12px rgba(0,0,0,0.08);
-    border-bottom: 1px solid rgba(0,0,0,0.06);
+    /* remain dark, just add slight blur/opacity change if desired */
+    background: rgba(0,0,0,0.25);
+    color: rgba(255,255,255,0.9);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 1px 12px rgba(0,0,0,0.15);
+    /* no border needed on dark navbar */
   }
 
   /* Nav links */
   .nav-links { display: flex; gap: 8px; align-items: center; }
   .nav-link {
-    font-size: 14px; font-weight: 500; color: #3a3a3a;
+    font-size: 14px; font-weight: 500;
+    color: rgba(255,255,255,0.85);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
     padding: 6px 4px; border-radius: 6px;
     background: none; border: none; cursor: pointer;
     transition: color 0.2s;
     font-family: 'Inter', sans-serif;
   }
-  .nav-link:hover { color: #111; }
+  .nav-link:hover { color: #fff; }
+
+  /* scrolled state links remain bright */
+  .navbar--scrolled .nav-link { color: rgba(255,255,255,0.85); }
+  .navbar--scrolled .nav-link:hover { color: #fff; }
 
   /* Pill buttons */
   .pill-btn {
@@ -204,12 +218,14 @@ const css = `
     font-weight: 700;
     line-height: 1.06;
     letter-spacing: -2px;
-    color: #111;
+    color: #fff; /* white for contrast against dark bg */
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
     margin-bottom: 22px;
   }
   .hero-sub {
-    font-size: 17px; line-height: 1.7; color: #555;
+    font-size: 17px; line-height: 1.7; color: rgba(255,255,255,0.85);
     max-width: 500px; margin-bottom: 36px; font-weight: 400;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
   }
   .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 
@@ -263,6 +279,7 @@ const css = `
 
 const s: Record<string, React.CSSProperties> = {
     root: {
+        position: "relative",
         minHeight: "100vh",
         background: "#fafaf8",
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
