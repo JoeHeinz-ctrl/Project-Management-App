@@ -270,6 +270,10 @@ export default function Dashboard({ project, backToProjects }: any) {
   const [editTaskData, setEditTaskData] = useState<{ id: number; title: string } | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
+  // **Keyboard/selection state**
+  // pressed shortcuts should operate on the currently selected task.
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+
   // keep a ref we can read inside drag handlers (avoids stale closures)
   const tasksRef = useRef(tasks);
   useEffect(() => { tasksRef.current = tasks; }, [tasks]);
@@ -278,6 +282,13 @@ export default function Dashboard({ project, backToProjects }: any) {
     if (!project) { setTasks([]); return; }
     fetchTasks(project.id).then(setTasks).catch(() => setTasks([]));
   }, [project]);
+
+  // clear selection if the selected task disappears
+  useEffect(() => {
+    if (selectedTaskId !== null && !tasks.find((t) => t.id === selectedTaskId)) {
+      setSelectedTaskId(null);
+    }
+  }, [tasks, selectedTaskId]);
 
   // Fetch current user and compute greeting
   useEffect(() => {
@@ -339,7 +350,7 @@ export default function Dashboard({ project, backToProjects }: any) {
     finally { setDeleteConfirmId(null); }
   };
 
-  const promptEditTask = (e: React.MouseEvent, task: any) => { e.stopPropagation(); setEditTaskData({ id: task.id, title: task.title }); };
+  const promptEditTask = (e: React.MouseEvent, task: any) => { e.stopPropagation(); setSelectedTaskId(task.id); setEditTaskData({ id: task.id, title: task.title }); };
 
   const confirmEditTask = async () => {
     if (!editTaskData) return;
@@ -351,6 +362,64 @@ export default function Dashboard({ project, backToProjects }: any) {
     } catch { setAlertMessage("Failed to edit task"); }
     finally { setEditTaskData(null); }
   };
+
+  // select a task card (used by click and keyboard helpers)
+  const selectTask = (taskId: number | null) => {
+    setSelectedTaskId(taskId);
+  };
+
+  // edit a task directly (keyboard shortcut can call this)
+  const editTaskById = (task: any) => {
+    setSelectedTaskId(task.id);
+    setEditTaskData({ id: task.id, title: task.title });
+  };
+
+  // move the selected task to done column
+  const markSelectedDone = async () => {
+    if (selectedTaskId === null) return;
+    const t = tasks.find((x) => x.id === selectedTaskId);
+    if (!t || normalizeStatus(t.status) === "done") return;
+    try {
+      const updated = await moveTask(t.id, "done");
+      setTasks((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+    } catch {
+      setAlertMessage("Failed to mark task done");
+    }
+  };
+
+  // global keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // ignore when focus is on an input/textarea or a modal is showing
+      const tag = (e.target as HTMLElement).tagName;
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        (e.target as HTMLElement).isContentEditable ||
+        deleteConfirmId !== null ||
+        createPromptCol !== null ||
+        editTaskData !== null ||
+        alertMessage !== null
+      ) {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key === "n") {
+        // new task in same column as selected, or default todo
+        const col = selectedTaskId
+          ? normalizeStatus(tasks.find((x) => x.id === selectedTaskId)?.status || "")
+          : "todo";
+        promptCreateTask(col.toUpperCase());
+      } else if (key === "e") {
+        const t = selectedTaskId !== null && tasks.find((x) => x.id === selectedTaskId);
+        if (t) editTaskById(t);
+      } else if (key === "d") {
+        markSelectedDone();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedTaskId, tasks]);
 
   // ── drag handlers ─────────────────────────────────────────────────────────
   const onDragStart = (e: React.DragEvent, task: any) => {
@@ -510,8 +579,11 @@ export default function Dashboard({ project, backToProjects }: any) {
                 ? "8px 8px 20px rgba(0,0,0,0.6)"
                 : "6px 6px 12px rgba(0,0,0,0.4), -6px -6px 12px rgba(60,60,60,0.05)",
             cursor: "grab",
+            outline: selectedTaskId === t.id ? "2px solid #0b7de0" : "none",
+            outlineOffset: "-2px",
           }}
           draggable
+          onClick={(e) => { e.stopPropagation(); selectTask(t.id); }}
           onDragStart={(e) => onDragStart(e, t)}
           onDragEnd={onDragEnd}
           onDragOver={(e) => onDragOverTask(e, t)}
@@ -541,7 +613,7 @@ export default function Dashboard({ project, backToProjects }: any) {
 
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
-    <div style={styles.container}>
+    <div style={styles.container} onClick={() => selectTask(null)}>
       <style>{`
         *::-webkit-scrollbar { display: none; }
         * { scrollbar-width: none; }
@@ -634,6 +706,9 @@ export default function Dashboard({ project, backToProjects }: any) {
         {greeting && <div style={{ ...styles.subheader, fontSize: 16, marginBottom: 8 }}>{greeting}</div>}
         <div style={styles.header}>{project ? project.title : "Project Board"}</div>
         <div style={styles.subheader}>{tasks.length} total tasks</div>
+        <div style={{ ...styles.subheader, fontSize: 11, opacity: 0.7 }}>
+          Keyboard shortcuts: <kbd>N</kbd> = new task, <kbd>E</kbd> = edit selected, <kbd>D</kbd> = mark done
+        </div>
       </div>
 
       <div style={styles.board}>
